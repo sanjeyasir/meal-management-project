@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { useAuthStore } from "../store/authStore";
 import * as authService from "../services/firebase/authService";
-import { initFingerprintBridge, onFingerprintScan, onConnectionChange } from "../services/fingerprintBridge";
-import { message } from "antd";
+import { initFingerprintBridge, onFingerprintScan, onConnectionChange, KIOSK_DEVICES } from "../services/fingerprintBridge";
+import { message, notification } from "antd";
 
 const AuthContext = createContext(null);
 
@@ -10,7 +10,8 @@ export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
   const { user, setUser, loading, setLoading, middlewareConnected, setMiddlewareConnected, logout: storeLogout } = useAuthStore();
-  const [initDone, setInitDone] = useState(true);
+  const [activePort, setActivePort] = useState(4370);
+  const [lastKioskEvent, setLastKioskEvent] = useState(null);
 
   // Initialize DB Seeds in background and setup Fingerprint Bridge
   useEffect(() => {
@@ -22,27 +23,70 @@ export const AuthProvider = ({ children }) => {
       console.warn("Background seed notice:", e);
     });
 
-    // Initialize Bridge
+    // Initialize Bridge (connecting on port 4370 & 5000)
     initFingerprintBridge();
 
-    unsubscribeConn = onConnectionChange((connected) => {
+    unsubscribeConn = onConnectionChange((connected, port) => {
       setMiddlewareConnected(connected);
+      if (port) setActivePort(port);
     });
 
-    // Global Biometric Listener
-    unsubscribeScan = onFingerprintScan(async (payload) => {
-      console.log("[AuthContext] Processing incoming fingerprint scan:", payload);
+    // Global Biometric Listener for Kiosks
+    unsubscribeScan = onFingerprintScan(async (eventData) => {
+      console.log("[AuthContext] Processing incoming kiosk scan event:", eventData);
+      
+      const rawPayload = eventData?.payload || eventData;
+      const kiosk = eventData?.kiosk || {
+        type: "GENERAL",
+        role: "GENERAL_KIOSK",
+        ip: "127.0.0.1",
+        name: "Biometric Device",
+        targetAction: "GENERAL",
+        targetRoute: "/kiosk"
+      };
+
+      setLastKioskEvent(eventData);
+
       try {
-        const session = await authService.loginWithBiometric(payload);
+        const session = await authService.loginWithBiometric(rawPayload);
         setUser(session);
-        message.success({
-          content: `Welcome, ${session.name}! (${session.category_name} - ${session.pay_category})`,
-          duration: 3
-        });
+
+        const isOrderingKiosk = kiosk.type === "ORDERING" || kiosk.targetAction === "ORDER" || kiosk.ip === "192.168.8.168";
+        const isReceivingKiosk = kiosk.type === "RECEIVING" || kiosk.targetAction === "RECEIVE" || kiosk.ip === "192.168.8.160";
+
+        // Dispatch window event for page-level navigation / auto-action
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("KIOSK_SCAN_EVENT", {
+              detail: { session, kiosk, isOrderingKiosk, isReceivingKiosk }
+            })
+          );
+        }
+
+        if (isOrderingKiosk) {
+          notification.success({
+            message: `📱 Ordering Kiosk (192.168.8.168:4370)`,
+            description: `Welcome, ${session.name}! (${session.employee_id}) - Proceeding to Meal Ordering`,
+            placement: "topRight",
+            duration: 4
+          });
+        } else if (isReceivingKiosk) {
+          notification.success({
+            message: `🍲 Receiving Kiosk (192.168.8.160:4370)`,
+            description: `Welcome, ${session.name}! (${session.employee_id}) - Ready to Dispense Meal`,
+            placement: "topRight",
+            duration: 4
+          });
+        } else {
+          message.success({
+            content: `Welcome, ${session.name}! (${session.category_name} - ${session.pay_category})`,
+            duration: 3
+          });
+        }
       } catch (err) {
         console.error("Fingerprint auth error:", err);
         message.error({
-          content: `Biometric Scan: ${err.message}`,
+          content: `Biometric Scan Error (${kiosk.name || "Kiosk"}): ${err.message}`,
           duration: 4
         });
       }
@@ -104,6 +148,9 @@ export const AuthProvider = ({ children }) => {
     loading,
     initDone: true,
     middlewareConnected,
+    activePort,
+    kiosks: KIOSK_DEVICES,
+    lastKioskEvent,
     loginManual,
     loginWithBiometric,
     selectEmployee,

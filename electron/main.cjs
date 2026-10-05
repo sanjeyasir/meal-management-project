@@ -6,21 +6,21 @@ const { fork } = require('child_process');
 let mainWindow = null;
 let middlewareProcess = null;
 
-// Start embedded middleware server on port 5000 if not already active
+// Start embedded middleware server on port 4370 if not already active
 function ensureMiddlewareRunning() {
-  const req = http.get('http://localhost:5000/status', (res) => {
-    console.log('[Electron Main] Middleware server is already active on port 5000.');
+  const req = http.get('http://localhost:4370/status', (res) => {
+    console.log('[Electron Main] Middleware server is already active on port 4370.');
   });
 
   req.on('error', () => {
-    console.log('[Electron Main] Launching embedded Middleware Server on port 5000...');
+    console.log('[Electron Main] Launching embedded Middleware Server on port 4370...');
     try {
       const serverScript = path.join(__dirname, '../server/middlewareServer.js');
       middlewareProcess = fork(serverScript, [], {
-        env: { ...process.env, PORT: '5000' },
+        env: { ...process.env, PORT: '4370' },
         silent: false
       });
-      console.log('[Electron Main] Embedded Middleware Server launched successfully.');
+      console.log('[Electron Main] Embedded Middleware Server launched successfully on port 4370.');
     } catch (e) {
       console.error('[Electron Main] Failed to spawn embedded middleware:', e);
     }

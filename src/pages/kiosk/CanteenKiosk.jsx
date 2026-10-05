@@ -20,7 +20,9 @@ import {
   LockOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
-  ArrowRightOutlined
+  ArrowRightOutlined,
+  DesktopOutlined,
+  CheckOutlined
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
@@ -43,7 +45,7 @@ function getSriLankaDisplayTime() {
 }
 
 export default function CanteenKiosk() {
-  const { currentUser, selectEmployee, logout, middlewareConnected, isAdmin } = useAuth();
+  const { currentUser, selectEmployee, logout, middlewareConnected, activePort, isAdmin } = useAuth();
   const navigate = useNavigate();
 
   const [employees, setEmployees] = useState([]);
@@ -83,6 +85,27 @@ export default function CanteenKiosk() {
     }
   }, [currentUser]);
 
+  // Listen to physical Kiosk Scan events (Ordering Kiosk vs Receiving Kiosk)
+  useEffect(() => {
+    const handleKioskScan = (e) => {
+      const { kiosk, isOrderingKiosk, isReceivingKiosk } = e.detail || {};
+      console.log("[CanteenKiosk] Biometric scan event received for navigation:", kiosk);
+
+      if (isOrderingKiosk) {
+        // Auto-navigate to Meal Order Page
+        navigate("/meals/order");
+      } else if (isReceivingKiosk) {
+        // Auto-navigate to Meal Receive Page
+        navigate("/meals/receive");
+      }
+    };
+
+    window.addEventListener("KIOSK_SCAN_EVENT", handleKioskScan);
+    return () => {
+      window.removeEventListener("KIOSK_SCAN_EVENT", handleKioskScan);
+    };
+  }, [navigate]);
+
   // Autocomplete Selection
   const handleSelectEmployee = async (empId) => {
     if (!empId) {
@@ -104,7 +127,7 @@ export default function CanteenKiosk() {
 
   const handleNavigateOrder = () => {
     if (!currentUser) {
-      message.info("Please search and select your employee name first.");
+      message.info("Please search and select your employee name or scan fingerprint first.");
       return;
     }
     navigate("/meals/order");
@@ -112,7 +135,7 @@ export default function CanteenKiosk() {
 
   const handleNavigateReceive = () => {
     if (!currentUser) {
-      message.info("Please search and select your employee name first.");
+      message.info("Please search and select your employee name or scan fingerprint first.");
       return;
     }
     navigate("/meals/receive");
@@ -137,7 +160,9 @@ export default function CanteenKiosk() {
           alignItems: "center",
           background: "rgba(0, 0, 0, 0.2)",
           backdropFilter: "blur(12px)",
-          borderBottom: "1px solid rgba(255, 255, 255, 0.1)"
+          borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+          flexWrap: "wrap",
+          gap: 12
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
@@ -155,7 +180,7 @@ export default function CanteenKiosk() {
               MEAL MANAGEMENT PROJECT
             </div>
             <div style={{ fontSize: "0.8rem", color: "#a7f3d0", fontWeight: 700 }}>
-              Canteen Self-Service Kiosk
+              Canteen Self-Service Kiosk System
             </div>
           </div>
         </div>
@@ -181,8 +206,48 @@ export default function CanteenKiosk() {
             <span>Sri Jayawardenepura Time: <b>{slTimeStr}</b></span>
           </Tag>
 
-          {/* Biometric Status Tag */}
-          <Tooltip title="Biometric Listener (Port 5000). Click to test scanner simulator.">
+          {/* Ordering Kiosk IP Status Badge */}
+          <Tooltip title="Ordering Kiosk IP: 192.168.8.168:4370. Click to test/inspect.">
+            <Tag
+              color="indigo"
+              onClick={() => setMonitorOpen(true)}
+              style={{
+                cursor: "pointer",
+                fontWeight: 700,
+                padding: "6px 12px",
+                borderRadius: 10,
+                fontSize: 12,
+                background: "rgba(99, 102, 241, 0.25)",
+                border: "1px solid rgba(99, 102, 241, 0.5)",
+                color: "#e0e7ff"
+              }}
+            >
+              📱 Order Kiosk: 192.168.8.168
+            </Tag>
+          </Tooltip>
+
+          {/* Receiving Kiosk IP Status Badge */}
+          <Tooltip title="Receiving Kiosk IP: 192.168.8.160:4370. Click to test/inspect.">
+            <Tag
+              color="emerald"
+              onClick={() => setMonitorOpen(true)}
+              style={{
+                cursor: "pointer",
+                fontWeight: 700,
+                padding: "6px 12px",
+                borderRadius: 10,
+                fontSize: 12,
+                background: "rgba(16, 185, 129, 0.25)",
+                border: "1px solid rgba(16, 185, 129, 0.5)",
+                color: "#a7f3d0"
+              }}
+            >
+              🍲 Receive Kiosk: 192.168.8.160
+            </Tag>
+          </Tooltip>
+
+          {/* Biometric Listener Port Status */}
+          <Tooltip title={`Biometric Middleware Listener (Port ${activePort || 4370}). Click to test simulator.`}>
             <Tag
               icon={<ThunderboltOutlined />}
               color={middlewareConnected ? "success" : "warning"}
@@ -195,7 +260,7 @@ export default function CanteenKiosk() {
                 fontSize: 13
               }}
             >
-              {middlewareConnected ? "Biometric Ready (Port 5000)" : "Biometric Simulator"}
+              {middlewareConnected ? `Port ${activePort || 4370} Active` : "Biometric Simulator"}
             </Tag>
           </Tooltip>
 
@@ -237,7 +302,7 @@ export default function CanteenKiosk() {
             Select Employee
           </Title>
           <Text style={{ color: "#a7f3d0", fontSize: 15 }}>
-            Touch the biometric scanner OR search employee name / ID below
+            Touch the biometric scanner at <b>Ordering Kiosk (192.168.8.168)</b> / <b>Receiving Kiosk (192.168.8.160)</b> OR search below
           </Text>
 
           {/* Autocomplete Search Bar */}
@@ -404,9 +469,9 @@ export default function CanteenKiosk() {
           </div>
         )}
 
-        {/* ONLY THE TWO MAIN BUTTONS: ORDER MEALS & RECEIVE MEALS */}
+        {/* THE TWO MAIN ACTION BUTTONS: ORDER MEALS & RECEIVE MEALS */}
         <Row gutter={[24, 24]}>
-          {/* 1. ORDER MEALS BUTTON */}
+          {/* 1. ORDER MEALS BUTTON (Tied to Ordering Kiosk 192.168.8.168:4370) */}
           <Col xs={24} sm={12}>
             <Card
               hoverable
@@ -425,9 +490,26 @@ export default function CanteenKiosk() {
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
-                minHeight: 280
+                minHeight: 280,
+                position: "relative"
               }}
             >
+              <div
+                style={{
+                  position: "absolute",
+                  top: 14,
+                  right: 14,
+                  background: "rgba(255,255,255,0.15)",
+                  padding: "4px 10px",
+                  borderRadius: 8,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "#e0e7ff"
+                }}
+              >
+                IP: 192.168.8.168:4370
+              </div>
+
               <div
                 style={{
                   width: 80,
@@ -472,7 +554,7 @@ export default function CanteenKiosk() {
             </Card>
           </Col>
 
-          {/* 2. RECEIVE MEALS BUTTON */}
+          {/* 2. RECEIVE MEALS BUTTON (Tied to Receiving Kiosk 192.168.8.160:4370) */}
           <Col xs={24} sm={12}>
             <Card
               hoverable
@@ -491,9 +573,26 @@ export default function CanteenKiosk() {
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
-                minHeight: 280
+                minHeight: 280,
+                position: "relative"
               }}
             >
+              <div
+                style={{
+                  position: "absolute",
+                  top: 14,
+                  right: 14,
+                  background: "rgba(255,255,255,0.15)",
+                  padding: "4px 10px",
+                  borderRadius: 8,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "#a7f3d0"
+                }}
+              >
+                IP: 192.168.8.160:4370
+              </div>
+
               <div
                 style={{
                   width: 80,

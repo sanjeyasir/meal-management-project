@@ -132,7 +132,7 @@ export default function AppLayout({ children }) {
               borderColor: middlewareConnected ? "#10b981" : "#f59e0b"
             }}
           >
-            {!collapsed && (middlewareConnected ? "Port 5000 Active" : "Biometric Simulator")}
+            {!collapsed && (middlewareConnected ? "Port 4370 Active" : "Biometric Simulator")}
           </Button>
         </Tooltip>
       </div>
@@ -281,7 +281,7 @@ export default function AppLayout({ children }) {
 
           <Space size="middle">
             {/* Biometric Status Pill */}
-            <Tooltip title="Biometric Middleware (Port 5000). Click to inspect logs or simulate scan.">
+            <Tooltip title="Biometric Middleware (Port 4370). Ordering Kiosk: 192.168.8.168, Receiving Kiosk: 192.168.8.160. Click to inspect.">
               <Tag
                 icon={<ThunderboltOutlined />}
                 color={middlewareConnected ? "success" : "warning"}
@@ -296,7 +296,7 @@ export default function AppLayout({ children }) {
                   gap: 6
                 }}
               >
-                {middlewareConnected ? "Biometric Ready (Port 5000)" : "Biometric Simulator"}
+                {middlewareConnected ? "Biometric Ready (Port 4370)" : "Biometric Simulator"}
               </Tag>
             </Tooltip>
 

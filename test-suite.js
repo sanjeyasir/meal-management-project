@@ -2,49 +2,79 @@ import http from "http";
 
 async function runVerification() {
   console.log("==================================================");
-  console.log("🧪 STARTING AUTOMATED END-TO-END VERIFICATION TEST");
+  console.log("🧪 STARTING HARDWARE KIOSK END-TO-END VERIFICATION");
   console.log("==================================================");
 
-  // Test 1: Middleware Health
-  console.log("\n[Test 1] Testing Biometric Middleware on port 5000...");
+  // Test 1: Middleware Health & Kiosk Configuration on Port 4370
+  console.log("\n[Test 1] Testing Biometric Middleware on primary Port 4370...");
   try {
-    const res = await fetch("http://localhost:5000/status");
+    const res = await fetch("http://localhost:4370/status");
     const json = await res.json();
-    console.log("  ✅ Middleware Status:", json);
+    console.log("  ✅ Primary Port 4370 Status:", json.status);
+    console.log("  ✅ Configured Kiosks in Middleware:", json.kiosks);
   } catch (err) {
-    console.error("  ❌ Middleware status error:", err.message);
+    console.error("  ❌ Port 4370 status error:", err.message);
   }
 
-  // Test 2: Biometric HTTP POST Transmission (Hardware Emulation)
-  console.log("\n[Test 2] Simulating Hardware Biometric Reader POST / on port 5000...");
+  // Test 2: Secondary Port 5000 Fallback
+  console.log("\n[Test 2] Testing Dual Listener on secondary Port 5000...");
   try {
-    const postRes = await fetch("http://localhost:5000/", {
+    const res5000 = await fetch("http://localhost:5000/status");
+    const json5000 = await res5000.json();
+    console.log("  ✅ Secondary Port 5000 Status:", json5000.status);
+  } catch (err) {
+    console.log("  ℹ️ Secondary Port 5000 status (optional):", err.message);
+  }
+
+  // Test 3: Simulating POST from Ordering Kiosk (IP: 192.168.8.168:4370)
+  console.log("\n[Test 3] Simulating POST call from Ordering Kiosk (192.168.8.168:4370)...");
+  try {
+    const postResOrder = await fetch("http://localhost:4370/", {
       method: "POST",
-      headers: { "Content-Type": "text/plain" },
+      headers: {
+        "Content-Type": "text/plain",
+        "X-Forwarded-For": "192.168.8.168"
+      },
       body: "EMP001\tSanjey Asirvatham\tQuality Assurance Lead"
     });
-    const text = await postRes.text();
-    console.log("  ✅ Biometric POST Response:", text);
-
-    // Verify in logs
-    const logsRes = await fetch("http://localhost:5000/api/logs");
-    const logs = await logsRes.json();
-    console.log(`  ✅ Middleware has captured ${logs.logs?.length || 0} scan log(s). Latest:`, logs.logs?.[0]?.raw);
+    const textOrder = await postResOrder.text();
+    console.log("  ✅ Ordering Kiosk POST Response:", textOrder);
   } catch (err) {
-    console.error("  ❌ Biometric POST error:", err.message);
+    console.error("  ❌ Ordering Kiosk POST error:", err.message);
   }
 
-  // Test 3: Vite Web & Desktop Server
-  console.log("\n[Test 3] Testing Frontend Web / Desktop Server on port 5173...");
+  // Test 4: Simulating POST from Receiving Kiosk (IP: 192.168.8.160:4370)
+  console.log("\n[Test 4] Simulating POST call from Receiving Kiosk (192.168.8.160:4370)...");
   try {
-    const viteRes = await fetch("http://localhost:5173/");
-    console.log("  ✅ Vite Frontend status code:", viteRes.status, "(OK)");
+    const postResReceive = await fetch("http://localhost:4370/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/plain",
+        "X-Forwarded-For": "192.168.8.160"
+      },
+      body: "EMP002\tKasun Perera\tMachine Operator"
+    });
+    const textReceive = await postResReceive.text();
+    console.log("  ✅ Receiving Kiosk POST Response:", textReceive);
   } catch (err) {
-    console.error("  ❌ Vite frontend error:", err.message);
+    console.error("  ❌ Receiving Kiosk POST error:", err.message);
+  }
+
+  // Test 5: Verify Live Scan Logs categorization
+  console.log("\n[Test 5] Verifying Kiosk Log Classification in Middleware...");
+  try {
+    const logsRes = await fetch("http://localhost:4370/api/logs");
+    const logs = await logsRes.json();
+    console.log(`  ✅ Captured ${logs.logs?.length || 0} scan logs:`);
+    (logs.logs || []).slice(0, 3).forEach((l, idx) => {
+      console.log(`     [Log ${idx + 1}] Source: ${l.sourceIp}:${l.port} | Kiosk: ${l.kioskName} (${l.kioskRole}) | Action: ${l.targetAction} | Employee: ${l.employeeId}`);
+    });
+  } catch (err) {
+    console.error("  ❌ Log verification error:", err.message);
   }
 
   console.log("\n==================================================");
-  console.log("🎉 ALL CORE VERIFICATION TESTS COMPLETED!");
+  console.log("🎉 ALL KIOSK END-TO-END VERIFICATION TESTS COMPLETED!");
   console.log("==================================================");
 }
 

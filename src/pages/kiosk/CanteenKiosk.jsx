@@ -17,7 +17,6 @@ import {
   UserOutlined,
   CheckCircleOutlined,
   ShoppingOutlined,
-  LockOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
   ArrowRightOutlined,
@@ -263,25 +262,6 @@ export default function CanteenKiosk() {
               {middlewareConnected ? `Port ${activePort || 4370} Active` : "Biometric Simulator"}
             </Tag>
           </Tooltip>
-
-          {/* Admin Portal Link (Only visible when already authenticated as Admin) */}
-          {isAdmin && (
-            <Button
-              type="primary"
-              icon={<LockOutlined />}
-              onClick={() => navigate("/admin/dashboard")}
-              style={{
-                fontWeight: 700,
-                borderRadius: 10,
-                background: "rgba(255, 255, 255, 0.15)",
-                border: "1px solid rgba(255, 255, 255, 0.3)",
-                backdropFilter: "blur(8px)",
-                color: "#ffffff"
-              }}
-            >
-              Go to Admin Portal
-            </Button>
-          )}
         </Space>
       </div>
 

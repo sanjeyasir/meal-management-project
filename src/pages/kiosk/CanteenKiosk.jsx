@@ -264,22 +264,24 @@ export default function CanteenKiosk() {
             </Tag>
           </Tooltip>
 
-          {/* Admin Portal Shortcut */}
-          <Button
-            type="primary"
-            icon={<LockOutlined />}
-            onClick={() => navigate(isAdmin ? "/admin/dashboard" : "/admin/login")}
-            style={{
-              fontWeight: 700,
-              borderRadius: 10,
-              background: "rgba(255, 255, 255, 0.15)",
-              border: "1px solid rgba(255, 255, 255, 0.3)",
-              backdropFilter: "blur(8px)",
-              color: "#ffffff"
-            }}
-          >
-            {isAdmin ? "Go to Admin Portal" : "Admin Login"}
-          </Button>
+          {/* Admin Portal Link (Only visible when already authenticated as Admin) */}
+          {isAdmin && (
+            <Button
+              type="primary"
+              icon={<LockOutlined />}
+              onClick={() => navigate("/admin/dashboard")}
+              style={{
+                fontWeight: 700,
+                borderRadius: 10,
+                background: "rgba(255, 255, 255, 0.15)",
+                border: "1px solid rgba(255, 255, 255, 0.3)",
+                backdropFilter: "blur(8px)",
+                color: "#ffffff"
+              }}
+            >
+              Go to Admin Portal
+            </Button>
+          )}
         </Space>
       </div>
 

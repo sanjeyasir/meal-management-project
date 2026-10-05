@@ -26,9 +26,12 @@ export default function AppRoutes() {
       <Route path="/" element={<CanteenKiosk />} />
       <Route path="/kiosk" element={<CanteenKiosk />} />
 
-      {/* Admin Login (Clean Credentials Only) */}
-      <Route path="/login" element={<Login />} />
+      {/* Default /login redirects to Canteen Kiosk */}
+      <Route path="/login" element={<Navigate to="/kiosk" replace />} />
+
+      {/* Dedicated Admin Login Route */}
       <Route path="/admin/login" element={<Login />} />
+      <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
 
       {/* Admin Protected Management Portal */}
       <Route

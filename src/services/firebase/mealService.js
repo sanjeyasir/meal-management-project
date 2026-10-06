@@ -254,11 +254,17 @@ export async function updateMealAllocationStatus(allocationId, status) {
 
 /**
  * Delete a meal allocation.
- * Only allocations with status 'Ordered' can be deleted/cancelled.
+ * If force is false, allocations with status 'Ordered' can only be cancelled.
+ * If force is true (admin actions), deletes unconditionally.
  */
-export async function deleteMealAllocation(allocationId, force = false) {
+export async function deleteMealAllocation(allocationId, force = true) {
   try {
-    const docRef = doc(db, COLLECTION_NAME, allocationId);
+    const cleanId = String(allocationId?.id || allocationId || "").trim();
+    if (!cleanId) {
+      return { success: false, message: "Invalid or empty allocation ID." };
+    }
+
+    const docRef = doc(db, COLLECTION_NAME, cleanId);
     if (!force) {
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
@@ -272,9 +278,26 @@ export async function deleteMealAllocation(allocationId, force = false) {
         }
       }
     }
+
+    // Direct document deletion
     await deleteDoc(docRef);
+
+    // Fallback: search for any documents where id or doc ID matches cleanId
+    try {
+      const q = query(collection(db, COLLECTION_NAME), where("id", "==", cleanId));
+      const snap = await getDocs(q);
+      for (const d of snap.docs) {
+        if (d.id !== cleanId) {
+          await deleteDoc(d.ref);
+        }
+      }
+    } catch (e) {
+      // Non-critical fallback
+    }
+
     return { success: true, message: "Allocation cancelled and removed successfully" };
   } catch (error) {
+    console.error("Error deleting meal allocation:", error);
     return { success: false, message: error.message };
   }
 }

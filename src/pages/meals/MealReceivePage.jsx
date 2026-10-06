@@ -47,7 +47,7 @@ function getSriLankaTime() {
 }
 
 export default function MealReceivePage() {
-  const { currentUser, isAdmin } = useAuth();
+  const { currentUser, isAdmin, kiosks } = useAuth();
   const { playSuccessChime } = useNotification();
   const navigate = useNavigate();
 
@@ -93,6 +93,19 @@ export default function MealReceivePage() {
   useEffect(() => {
     loadTodayMeals();
   }, [currentUser]);
+
+  // Listen to incoming biometric scan at Receiving Kiosk
+  useEffect(() => {
+    const handleKioskEvent = (e) => {
+      const { isReceivingKiosk, session } = e.detail || {};
+      if (isReceivingKiosk) {
+        message.info(`🍲 Fingerprint recognized at Receiving Kiosk: ${session?.name || "Employee"}`);
+        loadTodayMeals();
+      }
+    };
+    window.addEventListener("KIOSK_SCAN_EVENT", handleKioskEvent);
+    return () => window.removeEventListener("KIOSK_SCAN_EVENT", handleKioskEvent);
+  }, []);
 
   // Meal window verification based on Sri Jayawardenepura Time
   // Breakfast: 6:00 AM (360m) - 9:00 AM (540m)
@@ -206,8 +219,11 @@ export default function MealReceivePage() {
           </Title>
         </Space>
 
-        {/* Live Sri Jayawardenepura Time Tag */}
+        {/* Live Sri Jayawardenepura Time Tag & Kiosk IP */}
         <Space size="small">
+          <Tag color="cyan" style={{ padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 700 }}>
+            🍲 Kiosk: {kiosks?.RECEIVING?.ip || "192.168.8.160"}:{kiosks?.RECEIVING?.port || 4370}
+          </Tag>
           <Tag color="emerald" style={{ padding: "6px 14px", borderRadius: 8, fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
             <EnvironmentOutlined />
             <span>Sri Jayawardenepura Time: <b>{slTime.displayTime}</b> ({slTime.dateStr})</span>

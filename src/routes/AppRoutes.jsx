@@ -22,16 +22,14 @@ import MyMealAllocationsPage from "../pages/meals/MyMealAllocationsPage";
 export default function AppRoutes() {
   return (
     <Routes>
-      {/* Default Canteen Kiosk (No admin login needed, uses biometrics & autocomplete search) */}
-      <Route path="/" element={<CanteenKiosk />} />
-      <Route path="/kiosk" element={<CanteenKiosk />} />
-
-      {/* Default /login redirects to Canteen Kiosk */}
-      <Route path="/login" element={<Navigate to="/kiosk" replace />} />
-
-      {/* Dedicated Admin Login Route */}
-      <Route path="/admin/login" element={<Login />} />
+      {/* Default Route & Login now route to Admin Login */}
+      <Route path="/" element={<Login />} />
+      <Route path="/login" element={<Navigate to="/admin/login" replace />} />
       <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
+      <Route path="/admin/login" element={<Login />} />
+
+      {/* Canteen Kiosk Route (Preserved for Biometric / Autocomplete station) */}
+      <Route path="/kiosk" element={<CanteenKiosk />} />
 
       {/* Admin Protected Management Portal */}
       <Route

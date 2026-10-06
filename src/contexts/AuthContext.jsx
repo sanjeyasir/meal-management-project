@@ -11,6 +11,12 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }) => {
   const { user, setUser, loading, setLoading, middlewareConnected, setMiddlewareConnected, logout: storeLogout } = useAuthStore();
   const [activePort, setActivePort] = useState(4370);
+  const [activeHost, setActiveHost] = useState(KIOSK_DEVICES.ORDERING.ip || "192.168.8.168");
+  const [kioskStatuses, setKioskStatuses] = useState({
+    ORDERING: { connected: false, ip: KIOSK_DEVICES.ORDERING.ip, port: 4370 },
+    RECEIVING: { connected: false, ip: KIOSK_DEVICES.RECEIVING.ip, port: 4370 },
+    LOCAL: { connected: false, ip: "127.0.0.1", port: 4370 }
+  });
   const [lastKioskEvent, setLastKioskEvent] = useState(null);
 
   // Initialize DB Seeds in background and setup Fingerprint Bridge
@@ -23,12 +29,14 @@ export const AuthProvider = ({ children }) => {
       console.warn("Background seed notice:", e);
     });
 
-    // Initialize Bridge (connecting on port 4370 & 5000)
+    // Initialize Bridge (connecting on port 4370 & 5000 to 192.168.8.168, 192.168.8.160, and 127.0.0.1)
     initFingerprintBridge();
 
-    unsubscribeConn = onConnectionChange((connected, port) => {
+    unsubscribeConn = onConnectionChange((connected, port, host, statuses) => {
       setMiddlewareConnected(connected);
       if (port) setActivePort(port);
+      if (host) setActiveHost(host);
+      if (statuses) setKioskStatuses({ ...statuses });
     });
 
     // Global Biometric Listener for Kiosks
@@ -40,6 +48,7 @@ export const AuthProvider = ({ children }) => {
         type: "GENERAL",
         role: "GENERAL_KIOSK",
         ip: "127.0.0.1",
+        port: 4370,
         name: "Biometric Device",
         targetAction: "GENERAL",
         targetRoute: "/kiosk"
@@ -51,8 +60,17 @@ export const AuthProvider = ({ children }) => {
         const session = await authService.loginWithBiometric(rawPayload);
         setUser(session);
 
-        const isOrderingKiosk = kiosk.type === "ORDERING" || kiosk.targetAction === "ORDER" || kiosk.ip === "192.168.8.168";
-        const isReceivingKiosk = kiosk.type === "RECEIVING" || kiosk.targetAction === "RECEIVE" || kiosk.ip === "192.168.8.160";
+        const isOrderingKiosk =
+          kiosk.type === "ORDERING" ||
+          kiosk.targetAction === "ORDER" ||
+          kiosk.ip === KIOSK_DEVICES.ORDERING.ip ||
+          kiosk.sourceIp === KIOSK_DEVICES.ORDERING.ip;
+
+        const isReceivingKiosk =
+          kiosk.type === "RECEIVING" ||
+          kiosk.targetAction === "RECEIVE" ||
+          kiosk.ip === KIOSK_DEVICES.RECEIVING.ip ||
+          kiosk.sourceIp === KIOSK_DEVICES.RECEIVING.ip;
 
         // Dispatch window event for page-level navigation / auto-action
         if (typeof window !== "undefined") {
@@ -65,14 +83,14 @@ export const AuthProvider = ({ children }) => {
 
         if (isOrderingKiosk) {
           notification.success({
-            message: `📱 Ordering Kiosk (192.168.8.168:4370)`,
+            message: `📱 ${kiosk.name || "Ordering Kiosk"} (${kiosk.ip || KIOSK_DEVICES.ORDERING.ip}:${kiosk.port || 4370})`,
             description: `Welcome, ${session.name}! (${session.employee_id}) - Proceeding to Meal Ordering`,
             placement: "topRight",
             duration: 4
           });
         } else if (isReceivingKiosk) {
           notification.success({
-            message: `🍲 Receiving Kiosk (192.168.8.160:4370)`,
+            message: `🍲 ${kiosk.name || "Receiving Kiosk"} (${kiosk.ip || KIOSK_DEVICES.RECEIVING.ip}:${kiosk.port || 4370})`,
             description: `Welcome, ${session.name}! (${session.employee_id}) - Ready to Dispense Meal`,
             placement: "topRight",
             duration: 4
@@ -149,7 +167,9 @@ export const AuthProvider = ({ children }) => {
     initDone: true,
     middlewareConnected,
     activePort,
+    activeHost,
     kiosks: KIOSK_DEVICES,
+    kioskStatuses,
     lastKioskEvent,
     loginManual,
     loginWithBiometric,

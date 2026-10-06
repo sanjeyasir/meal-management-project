@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, onSnapshot } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, writeBatch, onSnapshot } from "firebase/firestore";
 import { db } from "./config";
 import { seedDefaultCategories } from "./categoryService";
 
@@ -127,14 +127,58 @@ export async function getEmployeeById(employeeId) {
     return found || null;
   } catch (error) {
     console.error("Error finding employee:", error);
-    // Fallback search
     const found = DEFAULT_EMPLOYEES.find(e => String(e.employee_id).toLowerCase() === String(employeeId).toLowerCase());
     return found || null;
   }
 }
 
 /**
- * Get all employees
+ * Check if an Employee ID is unique in Firestore
+ * @param {string} employeeId The new or updated employee ID to test
+ * @param {string} originalEmployeeId The original employee ID (if updating existing record)
+ * @returns {Promise<boolean>} True if ID is unique and available, False if already exists
+ */
+export async function isEmployeeIdUnique(employeeId, originalEmployeeId = null) {
+  if (!employeeId) return false;
+  const cleanId = String(employeeId).trim();
+  const cleanOriginal = originalEmployeeId ? String(originalEmployeeId).trim() : null;
+
+  // If updating and the ID didn't change, it's valid
+  if (cleanOriginal && cleanId.toLowerCase() === cleanOriginal.toLowerCase()) {
+    return true;
+  }
+
+  try {
+    // 1. Check direct doc existence
+    const docRef = doc(db, COLLECTION_NAME, cleanId);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      // If doc exists and is not the current employee being edited
+      if (!cleanOriginal || docSnap.id.toLowerCase() !== cleanOriginal.toLowerCase()) {
+        return false;
+      }
+    }
+
+    // 2. Query by employee_id field (case-insensitive or exact match)
+    const q = query(collection(db, COLLECTION_NAME), where("employee_id", "==", cleanId));
+    const querySnap = await getDocs(q);
+    const duplicates = querySnap.docs.filter(
+      (d) => !cleanOriginal || d.id.toLowerCase() !== cleanOriginal.toLowerCase()
+    );
+
+    if (duplicates.length > 0) {
+      return false;
+    }
+
+    return true;
+  } catch (err) {
+    console.warn("isEmployeeIdUnique check warning:", err);
+    return true;
+  }
+}
+
+/**
+ * Get all employees with full field normalization
  */
 export async function getEmployees() {
   try {
@@ -142,7 +186,35 @@ export async function getEmployees() {
     if (snapshot.empty) {
       return await seedDefaultEmployees();
     }
-    return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    return snapshot.docs.map(d => {
+      const data = d.data() || {};
+      const empId = String(data.employee_id || data.emp_id || data.id || d.id || "").trim();
+      const fullName = String(data.name || data.full_name || `${data.first_name || ""} ${data.last_name || ""}`.trim() || `Employee ${empId}`).trim();
+      const firstName = data.first_name || (fullName ? fullName.split(" ")[0] : "Employee");
+      const lastName = data.last_name || (fullName && fullName.split(" ").length > 1 ? fullName.split(" ").slice(1).join(" ") : empId);
+      const section = data.section || data.department || "Operations";
+      const department = data.department || data.section || "Operations";
+      const category = data.category_employment || data.pay_category || "Staff";
+      const status = data.status || (data.is_active !== false ? "Active" : "Inactive");
+
+      return {
+        id: d.id,
+        doc_id: d.id,
+        ...data,
+        employee_id: empId,
+        emp_id: empId,
+        name: fullName,
+        full_name: fullName,
+        first_name: firstName,
+        last_name: lastName,
+        section,
+        department,
+        category_employment: category,
+        pay_category: category,
+        status,
+        is_active: status === "Active"
+      };
+    });
   } catch (error) {
     console.error("Error getting employees:", error);
     return DEFAULT_EMPLOYEES;
@@ -158,7 +230,18 @@ export function subscribeEmployees(callback) {
     if (snapshot.empty) {
       seedDefaultEmployees().then(callback);
     } else {
-      const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      const data = snapshot.docs.map(d => {
+        const row = d.data() || {};
+        const empId = String(row.employee_id || row.emp_id || d.id || "").trim();
+        return {
+          id: d.id,
+          doc_id: d.id,
+          ...row,
+          employee_id: empId,
+          emp_id: empId,
+          name: row.name || row.full_name || `${row.first_name || ""} ${row.last_name || ""}`.trim() || `Employee ${empId}`
+        };
+      });
       callback(data);
     }
   }, (err) => {
@@ -168,24 +251,141 @@ export function subscribeEmployees(callback) {
 }
 
 /**
- * Create or update employee
+ * Create or update employee record
+ * @param {Object} employee Employee data to save
+ * @param {string} originalEmployeeId Original employee ID if updating an existing record
  */
-export async function saveEmployee(employee) {
-  const id = employee.employee_id || employee.id || `EMP_${Date.now()}`;
-  const docRef = doc(db, COLLECTION_NAME, id);
+export async function saveEmployee(employee, originalEmployeeId = null) {
+  const resolvedId = String(employee.employee_id || employee.emp_id || employee.id || "").trim();
+  if (!resolvedId || resolvedId === "undefined" || resolvedId === "null") {
+    throw new Error("Employee ID is required and cannot be empty.");
+  }
+
+  const cleanId = resolvedId;
+  const cleanOriginal = originalEmployeeId ? String(originalEmployeeId).trim() : null;
+
+  // Uniqueness validation
+  const isUnique = await isEmployeeIdUnique(cleanId, cleanOriginal);
+  if (!isUnique) {
+    throw new Error(`Employee ID '${cleanId}' is already registered in the system. Please specify a unique Employee ID.`);
+  }
+
+  const fullName = String(employee.name || employee.full_name || `${employee.first_name || ""} ${employee.last_name || ""}`.trim() || `Employee ${cleanId}`).trim();
+  const firstName = employee.first_name || (fullName ? fullName.split(" ")[0] : "Employee");
+  const lastName = employee.last_name || (fullName && fullName.split(" ").length > 1 ? fullName.split(" ").slice(1).join(" ") : cleanId);
+
   const payload = {
     ...employee,
-    employee_id: id,
+    id: cleanId,
+    employee_id: cleanId,
+    emp_id: cleanId,
+    name: fullName,
+    full_name: fullName,
+    first_name: firstName,
+    last_name: lastName,
+    designation: employee.designation?.trim() || "Staff",
+    company: employee.company?.trim() || "Hayleys Eco Solutions",
+    section: employee.section?.trim() || "Operations",
+    department: employee.department?.trim() || employee.section?.trim() || "Operations",
+    category_employment: employee.category_employment || employee.pay_category || "Staff",
+    pay_category: employee.pay_category || employee.category_employment || "Staff",
+    status: employee.status || "Active",
+    is_active: employee.status === "Active" || employee.is_active !== false,
+    email: employee.email?.trim() || "",
+    phone: employee.phone?.trim() || "",
     updated_at: new Date().toISOString()
   };
-  await setDoc(docRef, payload, { merge: true });
-  return { id, ...payload };
+
+  // If this is an update where the employee_id itself was changed
+  if (cleanOriginal && cleanOriginal !== cleanId) {
+    console.log(`[EmployeeService] Updating employee ID from ${cleanOriginal} -> ${cleanId}`);
+
+    // 1. Create new doc with new ID
+    const newDocRef = doc(db, COLLECTION_NAME, cleanId);
+    await setDoc(newDocRef, {
+      ...payload,
+      created_at: employee.created_at || new Date().toISOString()
+    });
+
+    // 2. Delete old doc with old ID
+    try {
+      await deleteDoc(doc(db, COLLECTION_NAME, cleanOriginal));
+    } catch (e) {
+      console.warn("Delete old doc error:", e);
+    }
+
+    // 3. Cascade update existing meal allocations to the new employee ID
+    try {
+      const allocQuery = query(collection(db, "meal_allocations"), where("employee_id", "==", cleanOriginal));
+      const allocSnap = await getDocs(allocQuery);
+      if (!allocSnap.empty) {
+        const batch = writeBatch(db);
+        allocSnap.docs.forEach((d) => {
+          batch.update(d.ref, {
+            employee_id: cleanId,
+            emp_id: cleanId,
+            employee_name: payload.name,
+            name: payload.name,
+            current_designation: payload.designation,
+            company: payload.company,
+            section: payload.section,
+            department: payload.department,
+            category_name: payload.category_employment,
+            pay_category: payload.pay_category,
+            updated_at: new Date().toISOString()
+          });
+        });
+        await batch.commit();
+      }
+    } catch (allocErr) {
+      console.warn("Notice: Failed cascading update to meal allocations:", allocErr);
+    }
+  } else {
+    // Normal create or in-place update
+    const docRef = doc(db, COLLECTION_NAME, cleanId);
+    await setDoc(docRef, payload, { merge: true });
+  }
+
+  return { id: cleanId, ...payload };
 }
 
 /**
- * Delete employee
+ * Delete employee record cleanly by Doc ID, employee_id, or emp_id
  */
-export async function deleteEmployee(employeeId) {
-  await deleteDoc(doc(db, COLLECTION_NAME, employeeId));
+export async function deleteEmployee(idOrEmpId) {
+  if (idOrEmpId === null || idOrEmpId === undefined) return false;
+  const cleanId = String(idOrEmpId).trim();
+  if (!cleanId) return false;
+
+  // 1. Try direct doc delete
+  try {
+    await deleteDoc(doc(db, COLLECTION_NAME, cleanId));
+  } catch (err) {
+    console.warn("Direct doc delete notice:", err);
+  }
+
+  // 2. Query delete by employee_id
+  try {
+    const q1 = query(collection(db, COLLECTION_NAME), where("employee_id", "==", cleanId));
+    const snap1 = await getDocs(q1);
+    for (const d of snap1.docs) {
+      await deleteDoc(d.ref);
+    }
+  } catch (err) {
+    console.warn("Query delete employee_id notice:", err);
+  }
+
+  // 3. Query delete by emp_id
+  try {
+    const q2 = query(collection(db, COLLECTION_NAME), where("emp_id", "==", cleanId));
+    const snap2 = await getDocs(q2);
+    for (const d of snap2.docs) {
+      await deleteDoc(d.ref);
+    }
+  } catch (err) {
+    console.warn("Query delete emp_id notice:", err);
+  }
+
   return true;
 }
+

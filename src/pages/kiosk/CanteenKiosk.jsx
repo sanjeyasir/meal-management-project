@@ -44,7 +44,7 @@ function getSriLankaDisplayTime() {
 }
 
 export default function CanteenKiosk() {
-  const { currentUser, selectEmployee, logout, middlewareConnected, activePort, isAdmin } = useAuth();
+  const { currentUser, selectEmployee, logout, middlewareConnected, activePort, activeHost, isAdmin, kiosks, kioskStatuses } = useAuth();
   const navigate = useNavigate();
 
   const [employees, setEmployees] = useState([]);
@@ -206,9 +206,9 @@ export default function CanteenKiosk() {
           </Tag>
 
           {/* Ordering Kiosk IP Status Badge */}
-          <Tooltip title="Ordering Kiosk IP: 192.168.8.168:4370. Click to test/inspect.">
+          <Tooltip title={`Ordering Kiosk WebSocket: ws://${kiosks?.ORDERING?.ip || "192.168.8.168"}:${kiosks?.ORDERING?.port || 4370} (${kioskStatuses?.ORDERING?.connected ? "Online & Listening" : "Attempting Connection"}). Click to configure.`}>
             <Tag
-              color="indigo"
+              color={kioskStatuses?.ORDERING?.connected ? "indigo" : "default"}
               onClick={() => setMonitorOpen(true)}
               style={{
                 cursor: "pointer",
@@ -216,19 +216,19 @@ export default function CanteenKiosk() {
                 padding: "6px 12px",
                 borderRadius: 10,
                 fontSize: 12,
-                background: "rgba(99, 102, 241, 0.25)",
-                border: "1px solid rgba(99, 102, 241, 0.5)",
-                color: "#e0e7ff"
+                background: kioskStatuses?.ORDERING?.connected ? "rgba(99, 102, 241, 0.35)" : "rgba(255, 255, 255, 0.12)",
+                border: `1.5px solid ${kioskStatuses?.ORDERING?.connected ? "#818cf8" : "rgba(255, 255, 255, 0.25)"}`,
+                color: "#ffffff"
               }}
             >
-              📱 Order Kiosk: 192.168.8.168
+              📱 Order: {kiosks?.ORDERING?.ip || "192.168.8.168"} {kioskStatuses?.ORDERING?.connected ? "🟢" : "⏳"}
             </Tag>
           </Tooltip>
 
           {/* Receiving Kiosk IP Status Badge */}
-          <Tooltip title="Receiving Kiosk IP: 192.168.8.160:4370. Click to test/inspect.">
+          <Tooltip title={`Receiving Kiosk WebSocket: ws://${kiosks?.RECEIVING?.ip || "192.168.8.160"}:${kiosks?.RECEIVING?.port || 4370} (${kioskStatuses?.RECEIVING?.connected ? "Online & Listening" : "Attempting Connection"}). Click to configure.`}>
             <Tag
-              color="emerald"
+              color={kioskStatuses?.RECEIVING?.connected ? "emerald" : "default"}
               onClick={() => setMonitorOpen(true)}
               style={{
                 cursor: "pointer",
@@ -236,17 +236,17 @@ export default function CanteenKiosk() {
                 padding: "6px 12px",
                 borderRadius: 10,
                 fontSize: 12,
-                background: "rgba(16, 185, 129, 0.25)",
-                border: "1px solid rgba(16, 185, 129, 0.5)",
-                color: "#a7f3d0"
+                background: kioskStatuses?.RECEIVING?.connected ? "rgba(16, 185, 129, 0.35)" : "rgba(255, 255, 255, 0.12)",
+                border: `1.5px solid ${kioskStatuses?.RECEIVING?.connected ? "#34d399" : "rgba(255, 255, 255, 0.25)"}`,
+                color: "#ffffff"
               }}
             >
-              🍲 Receive Kiosk: 192.168.8.160
+              🍲 Receive: {kiosks?.RECEIVING?.ip || "192.168.8.160"} {kioskStatuses?.RECEIVING?.connected ? "🟢" : "⏳"}
             </Tag>
           </Tooltip>
 
-          {/* Biometric Listener Port Status */}
-          <Tooltip title={`Biometric Middleware Listener (Port ${activePort || 4370}). Click to test simulator.`}>
+          {/* Biometric Listener Status */}
+          <Tooltip title={`Multi-Kiosk Bridge Active. Ordering IP: ${kiosks?.ORDERING?.ip || "192.168.8.168"}, Receiving IP: ${kiosks?.RECEIVING?.ip || "192.168.8.160"}. Click to open Monitor & IP Controller.`}>
             <Tag
               icon={<ThunderboltOutlined />}
               color={middlewareConnected ? "success" : "warning"}
@@ -259,7 +259,7 @@ export default function CanteenKiosk() {
                 fontSize: 13
               }}
             >
-              {middlewareConnected ? `Port ${activePort || 4370} Active` : "Biometric Simulator"}
+              {middlewareConnected ? "Kiosks Connected" : "Biometric Simulator"}
             </Tag>
           </Tooltip>
         </Space>

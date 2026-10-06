@@ -200,14 +200,9 @@ export default function AllocationsEditPage() {
 
   // Cancel / Delete Allocation
   const handleDeleteAllocation = async (record) => {
-    const isReceived = (record.status || "").toLowerCase() === "recieved" || (record.status || "").toLowerCase() === "received";
-    if (isReceived) {
-      message.error("Cannot cancel an allocation that has already been received/dispensed.");
-      return;
-    }
-
+    const allocId = record.id || record.doc_id;
     try {
-      const res = await deleteMealAllocation(record.id);
+      const res = await deleteMealAllocation(allocId, true);
       if (res.success) {
         message.success(`Allocation for ${record.employee_name} (${record.meal_type}) cancelled.`);
         await loadData();

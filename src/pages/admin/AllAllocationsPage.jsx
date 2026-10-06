@@ -93,7 +93,7 @@ export default function AllAllocationsPage() {
 
   const handleDelete = async (id) => {
     try {
-      const res = await deleteMealAllocation(id);
+      const res = await deleteMealAllocation(id, true);
       if (res.success) {
         message.success("Allocation removed successfully.");
         loadAllocations();
@@ -301,7 +301,7 @@ export default function AllAllocationsPage() {
         <Popconfirm
           title="Delete Meal Allocation"
           description="Are you sure you want to permanently delete this record?"
-          onConfirm={() => handleDelete(r.id)}
+          onConfirm={() => handleDelete(r.id || r.doc_id)}
           okText="Yes, Delete"
           cancelText="No"
           okButtonProps={{ danger: true }}

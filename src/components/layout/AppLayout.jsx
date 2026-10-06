@@ -28,7 +28,7 @@ export default function AppLayout({ children }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [monitorOpen, setMonitorOpen] = useState(false);
 
-  const { currentUser, logout, isAdmin, middlewareConnected } = useAuth();
+  const { currentUser, logout, isAdmin, middlewareConnected, activePort, activeHost, kiosks, kioskStatuses } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -115,7 +115,7 @@ export default function AppLayout({ children }) {
 
       {/* Biometric Status & Simulation Quick Button */}
       <div style={{ padding: collapsed ? "8px" : "16px", borderTop: "1px solid #f1f5f9", background: "#f8fafc" }}>
-        <Tooltip title="Click to open Biometric Middleware Monitor & Test Scanner">
+        <Tooltip title={`Click to open Biometric Middleware Monitor & IP Settings (Active: ws://${activeHost || "127.0.0.1"}:${activePort || 4370})`}>
           <Button
             type="dashed"
             block
@@ -132,7 +132,7 @@ export default function AppLayout({ children }) {
               borderColor: middlewareConnected ? "#10b981" : "#f59e0b"
             }}
           >
-            {!collapsed && (middlewareConnected ? "Port 4370 Active" : "Biometric Simulator")}
+            {!collapsed && (middlewareConnected ? `Port ${activePort || 4370} Active` : "Biometric Simulator")}
           </Button>
         </Tooltip>
       </div>
@@ -281,7 +281,7 @@ export default function AppLayout({ children }) {
 
           <Space size="middle">
             {/* Biometric Status Pill */}
-            <Tooltip title="Biometric Middleware (Port 4370). Ordering Kiosk: 192.168.8.168, Receiving Kiosk: 192.168.8.160. Click to inspect.">
+            <Tooltip title={`Multi-Kiosk Bridge. Ordering: ${kiosks?.ORDERING?.ip || "192.168.8.168"}:${kiosks?.ORDERING?.port || 4370} (${kioskStatuses?.ORDERING?.connected ? "Connected" : "Connecting"}), Receiving: ${kiosks?.RECEIVING?.ip || "192.168.8.160"}:${kiosks?.RECEIVING?.port || 4370} (${kioskStatuses?.RECEIVING?.connected ? "Connected" : "Connecting"}). Click to inspect & configure.`}>
               <Tag
                 icon={<ThunderboltOutlined />}
                 color={middlewareConnected ? "success" : "warning"}
@@ -296,7 +296,9 @@ export default function AppLayout({ children }) {
                   gap: 6
                 }}
               >
-                {middlewareConnected ? "Biometric Ready (Port 4370)" : "Biometric Simulator"}
+                {middlewareConnected
+                  ? `Kiosks (${kiosks?.ORDERING?.ip || "192.168.8.168"} & ${kiosks?.RECEIVING?.ip || "192.168.8.160"})`
+                  : "Biometric Simulator"}
               </Tag>
             </Tooltip>
 

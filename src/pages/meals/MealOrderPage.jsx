@@ -19,7 +19,7 @@ const { Title, Text, Paragraph } = Typography;
 const { RangePicker } = DatePicker;
 
 export default function MealOrderPage() {
-  const { currentUser } = useAuth();
+  const { currentUser, kiosks } = useAuth();
   const navigate = useNavigate();
 
   // State for meal counts
@@ -131,22 +131,28 @@ export default function MealOrderPage() {
   return (
     <div style={{ maxWidth: 1200, margin: "0 auto", width: "100%" }}>
       {/* Back Button & Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
-        <Button
-          icon={<ArrowLeftOutlined />}
-          onClick={() => navigate("/kiosk")}
-          style={{ borderRadius: 10, fontWeight: 600 }}
-        >
-          Back to Kiosk
-        </Button>
-        <div>
-          <Title level={3} style={{ margin: 0, fontWeight: 800 }}>
-            Order Meals (කෑම ඇණවුම්)
-          </Title>
-          <Text type="secondary">
-            Select meals and scheduling period for <b>{currentUser?.name}</b> ({currentUser?.employee_id})
-          </Text>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <Button
+            icon={<ArrowLeftOutlined />}
+            onClick={() => navigate("/kiosk")}
+            style={{ borderRadius: 10, fontWeight: 600 }}
+          >
+            Back to Kiosk
+          </Button>
+          <div>
+            <Title level={3} style={{ margin: 0, fontWeight: 800 }}>
+              Order Meals (කෑම ඇණවුම්)
+            </Title>
+            <Text type="secondary">
+              Select meals and scheduling period for <b>{currentUser?.name}</b> ({currentUser?.employee_id})
+            </Text>
+          </div>
         </div>
+
+        <Tag color="indigo" style={{ padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 700 }}>
+          📱 Kiosk: {kiosks?.ORDERING?.ip || "192.168.8.168"}:{kiosks?.ORDERING?.port || 4370}
+        </Tag>
       </div>
 
 

@@ -3,7 +3,7 @@ import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { getAnalytics, isSupported } from "firebase/analytics";
 
-// Firebase credentials provided for Meal Management System
+// Firebase credentials for Meal Management Project (Cloud Functions & Web App Unified)
 export const firebaseConfig = {
   apiKey: "AIzaSyBMHPcENLLt4uYIjCQIxNWrx339Aksv8Js",
   authDomain: "meal-management-project.firebaseapp.com",

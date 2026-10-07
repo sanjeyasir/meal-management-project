@@ -47,7 +47,7 @@ function getSriLankaTime() {
 }
 
 export default function MealReceivePage() {
-  const { currentUser, isAdmin, kiosks } = useAuth();
+  const { currentUser, isAdmin } = useAuth();
   const { playSuccessChime } = useNotification();
   const navigate = useNavigate();
 
@@ -209,24 +209,21 @@ export default function MealReceivePage() {
         <Space size="middle">
           <Button
             icon={<ArrowLeftOutlined />}
-            onClick={() => navigate("/kiosk")}
+            onClick={() => navigate("/admin/dashboard")}
             style={{ borderRadius: 10, fontWeight: 600 }}
           >
-            Back to Kiosk
+            Back to Dashboard
           </Button>
           <Title level={3} style={{ margin: 0, fontWeight: 800 }}>
             Receive Meals (කෑම ලබා ගැනීම)
           </Title>
         </Space>
 
-        {/* Live Sri Jayawardenepura Time Tag & Kiosk IP */}
+        {/* Live Sri Jayawardenepura Time Tag */}
         <Space size="small">
-          <Tag color="cyan" style={{ padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 700 }}>
-            🍲 Kiosk: {kiosks?.RECEIVING?.ip || "192.168.8.160"}:{kiosks?.RECEIVING?.port || 4370}
-          </Tag>
           <Tag color="emerald" style={{ padding: "6px 14px", borderRadius: 8, fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
             <EnvironmentOutlined />
-            <span>Sri Jayawardenepura Time: <b>{slTime.displayTime}</b> ({slTime.dateStr})</span>
+            <span>Sri Lanka Time: <b>{slTime.displayTime}</b> ({slTime.dateStr})</span>
           </Tag>
 
           {isAdmin && (

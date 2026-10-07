@@ -247,10 +247,10 @@ export default function EmployeesPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
         <div>
           <Title level={3} style={{ margin: 0, fontWeight: 800 }}>
-            Employees Directory & Biometric Profiles
+            Employees Directory
           </Title>
           <Text type="secondary">
-            Master Employee Records for Biometric Authentication, Kiosk Scanning & Meal Subsidies ({filteredEmployees.length} total)
+            Master Employee Records and Meal Subsidy Profiles ({filteredEmployees.length} total)
           </Text>
         </div>
 
@@ -309,7 +309,7 @@ export default function EmployeesPage() {
           type="info"
           showIcon
           message="Unique Employee ID Required"
-          description="Employee ID is used for biometric fingerprint authentication and must be unique across all active profiles."
+          description="Employee ID must be unique across all active profiles."
           style={{ marginTop: 12, marginBottom: 16, borderRadius: 10 }}
         />
 
@@ -318,7 +318,7 @@ export default function EmployeesPage() {
             <Col span={12}>
               <Form.Item
                 name="employee_id"
-                label={<span style={{ fontWeight: 600 }}>Employee ID (Biometric Key)</span>}
+                label={<span style={{ fontWeight: 600 }}>Employee ID</span>}
                 rules={[
                   { required: true, message: "Please enter an Employee ID" },
                   {

@@ -19,7 +19,7 @@ const { Title, Text, Paragraph } = Typography;
 const { RangePicker } = DatePicker;
 
 export default function MealOrderPage() {
-  const { currentUser, kiosks } = useAuth();
+  const { currentUser } = useAuth();
   const navigate = useNavigate();
 
   // State for meal counts
@@ -135,10 +135,10 @@ export default function MealOrderPage() {
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <Button
             icon={<ArrowLeftOutlined />}
-            onClick={() => navigate("/kiosk")}
+            onClick={() => navigate("/admin/dashboard")}
             style={{ borderRadius: 10, fontWeight: 600 }}
           >
-            Back to Kiosk
+            Back to Dashboard
           </Button>
           <div>
             <Title level={3} style={{ margin: 0, fontWeight: 800 }}>
@@ -149,10 +149,6 @@ export default function MealOrderPage() {
             </Text>
           </div>
         </div>
-
-        <Tag color="indigo" style={{ padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 700 }}>
-          📱 Kiosk: {kiosks?.ORDERING?.ip || "192.168.8.168"}:{kiosks?.ORDERING?.port || 4370}
-        </Tag>
       </div>
 
 

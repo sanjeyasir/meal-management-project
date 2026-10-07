@@ -1,13 +1,25 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap');
+
 :root {
-  --primary-color: #10b981;
+  --primary: #10b981;
   --primary-dark: #059669;
+  --primary-darker: #064e3b;
   --primary-light: #34d399;
-  --secondary-color: #6366f1;
-  --bg-color: #f8fafc;
+  --primary-soft: #ecfdf5;
+  --accent-blue: #3b82f6;
+  --accent-amber: #f59e0b;
+  --accent-purple: #8b5cf6;
+  --bg-app: #f8fafc;
+  --bg-card: #ffffff;
   --text-main: #0f172a;
-  --text-muted: #64748b;
-  --card-bg: #ffffff;
-  --border-color: #e2e8f0;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --border-subtle: #e2e8f0;
+  --border-card: #f1f5f9;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.04);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.05);
 }
 
 * {
@@ -17,12 +29,12 @@
 }
 
 body {
-  font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  background-color: var(--bg-color);
+  font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--bg-app);
   color: var(--text-main);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow-x: hidden;
+  min-height: 100vh;
 }
 
 /* Custom Scrollbars */
@@ -33,78 +45,168 @@ body {
 
 ::-webkit-scrollbar-track {
   background: #f1f5f9;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
 ::-webkit-scrollbar-thumb {
   background: #cbd5e1;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
 
-/* Glassmorphism Classes */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
-}
-
-.glass-card {
+/* Modern Card & Panel Utilities */
+.modern-card {
   background: #ffffff;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
-  border-radius: 16px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px !important;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.glass-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.09);
+.modern-card:hover {
+  box-shadow: var(--shadow-md);
   border-color: #cbd5e1;
 }
 
-/* Pulse animation for fingerprint */
-@keyframes pulse-ring {
-  0% {
-    transform: scale(0.95);
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
-  }
-  70% {
-    transform: scale(1.05);
-    box-shadow: 0 0 0 18px rgba(16, 185, 129, 0);
-  }
-  100% {
-    transform: scale(0.95);
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
-  }
+.stat-card {
+  background: #ffffff;
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 20px;
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
 }
 
-.fingerprint-pulse {
-  animation: pulse-ring 2.5s infinite cubic-bezier(0.45, 0, 0.55, 1);
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
-/* Ant design component enhancements */
+.stat-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--primary);
+  border-top-left-radius: 16px;
+  border-bottom-left-radius: 16px;
+}
+
+.stat-card.blue::after { background: #3b82f6; }
+.stat-card.green::after { background: #10b981; }
+.stat-card.amber::after { background: #f59e0b; }
+.stat-card.purple::after { background: #8b5cf6; }
+
+/* Clean Glassmorphism */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.dark-glass-card {
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+}
+
+/* Ant Design Global Polish */
 .ant-card {
   border-radius: 16px !important;
+  border-color: #e2e8f0 !important;
 }
 
-.ant-btn-round {
-  border-radius: 9999px !important;
+.ant-card-head {
+  border-bottom: 1px solid #f1f5f9 !important;
+  padding: 16px 20px !important;
+  font-weight: 700 !important;
+}
+
+.ant-btn-primary {
+  font-weight: 600 !important;
+  border-radius: 10px !important;
+  box-shadow: 0 4px 12px -2px rgba(16, 185, 129, 0.35) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.ant-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px -2px rgba(16, 185, 129, 0.45) !important;
+}
+
+.ant-table-wrapper .ant-table {
+  border-radius: 12px !important;
+  border: 1px solid #f1f5f9;
+}
+
+.ant-table-thead > tr > th {
+  background: #f8fafc !important;
+  color: #475569 !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  padding: 14px 16px !important;
+}
+
+.ant-table-tbody > tr > td {
+  padding: 14px 16px !important;
+  border-bottom: 1px solid #f8fafc !important;
+}
+
+.ant-table-tbody > tr:hover > td {
+  background: #f8fafc !important;
+}
+
+.ant-menu-light .ant-menu-item-selected {
+  background-color: #ecfdf5 !important;
+  color: #059669 !important;
+  font-weight: 700 !important;
+  border-radius: 10px !important;
+}
+
+.ant-menu-light .ant-menu-item {
+  border-radius: 10px !important;
+  margin: 4px 8px !important;
+  transition: all 0.2s ease !important;
+}
+
+.ant-menu-light .ant-menu-item:hover {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
 }
 
 .ant-tag {
   border-radius: 6px !important;
+  font-weight: 600 !important;
+  padding: 2px 8px !important;
 }
 
-.meal-option-btn {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+.ant-modal-content {
+  border-radius: 20px !important;
+  box-shadow: var(--shadow-xl) !important;
+  padding: 24px !important;
 }
 
-.meal-option-btn:hover {
-  transform: translateY(-3px);
+.ant-drawer-content {
+  border-top-left-radius: 20px !important;
+  border-bottom-left-radius: 20px !important;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.page-enter {
+  animation: fadeIn 0.3s ease-out forwards;
 }

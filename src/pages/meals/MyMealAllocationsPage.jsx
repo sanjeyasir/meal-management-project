@@ -140,10 +140,10 @@ export default function MyMealAllocationsPage() {
         <Space size="middle">
           <Button
             icon={<ArrowLeftOutlined />}
-            onClick={() => navigate("/kiosk")}
+            onClick={() => navigate("/admin/dashboard")}
             style={{ borderRadius: 10, fontWeight: 600 }}
           >
-            Back to Kiosk
+            Back to Dashboard
           </Button>
           <Title level={3} style={{ margin: 0, fontWeight: 800 }}>
             My Meal Allocations

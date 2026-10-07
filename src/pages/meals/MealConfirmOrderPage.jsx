@@ -181,22 +181,22 @@ export default function MealConfirmOrderPage() {
 
                 <Button
                   type="default"
-                  onClick={() => navigate("/kiosk")}
+                  onClick={() => navigate("/admin/dashboard")}
                   block
                   style={{ borderRadius: 10, fontWeight: 600 }}
                 >
-                  Return to Canteen Kiosk
+                  Back to Dashboard
                 </Button>
               </Space>
             ) : (
               <Button
                 type="primary"
                 size="large"
-                onClick={() => navigate("/kiosk")}
+                onClick={() => navigate("/admin/all-allocations")}
                 block
                 style={{ height: 46, borderRadius: 10, fontWeight: 700 }}
               >
-                Done • Back to Canteen Kiosk
+                Done • View Allocations
               </Button>
             )}
           </Card>

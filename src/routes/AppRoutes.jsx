@@ -2,10 +2,8 @@ import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "../components/common/ProtectedRoute";
 import AppLayout from "../components/layout/AppLayout";
-import KioskLayout from "../components/layout/KioskLayout";
 
 // Pages
-import CanteenKiosk from "../pages/kiosk/CanteenKiosk";
 import Login from "../pages/auth/Login";
 import AnalyticsDashboard from "../pages/admin/AnalyticsDashboard";
 import ReportsPage from "../pages/admin/ReportsPage";
@@ -22,14 +20,14 @@ import MyMealAllocationsPage from "../pages/meals/MyMealAllocationsPage";
 export default function AppRoutes() {
   return (
     <Routes>
-      {/* Default Route & Login now route to Admin Login */}
+      {/* Default Route & Login */}
       <Route path="/" element={<Login />} />
       <Route path="/login" element={<Navigate to="/admin/login" replace />} />
       <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
       <Route path="/admin/login" element={<Login />} />
 
-      {/* Canteen Kiosk Route (Preserved for Biometric / Autocomplete station) */}
-      <Route path="/kiosk" element={<CanteenKiosk />} />
+      {/* Redirect old /kiosk routes to Dashboard */}
+      <Route path="/kiosk" element={<Navigate to="/admin/dashboard" replace />} />
 
       {/* Admin Protected Management Portal */}
       <Route
@@ -109,14 +107,14 @@ export default function AppRoutes() {
         }
       />
 
-      {/* Employee Ordering & Dispensing (Uses Kiosk aesthetic, NO admin sidebar) */}
+      {/* Meal Ordering & Dispensing Portal */}
       <Route
         path="/meals/order"
         element={
           <ProtectedRoute>
-            <KioskLayout>
+            <AppLayout>
               <MealOrderPage />
-            </KioskLayout>
+            </AppLayout>
           </ProtectedRoute>
         }
       />
@@ -125,9 +123,9 @@ export default function AppRoutes() {
         path="/meals/confirm-order"
         element={
           <ProtectedRoute>
-            <KioskLayout>
+            <AppLayout>
               <MealConfirmOrderPage />
-            </KioskLayout>
+            </AppLayout>
           </ProtectedRoute>
         }
       />
@@ -136,9 +134,9 @@ export default function AppRoutes() {
         path="/meals/receive"
         element={
           <ProtectedRoute>
-            <KioskLayout>
+            <AppLayout>
               <MealReceivePage />
-            </KioskLayout>
+            </AppLayout>
           </ProtectedRoute>
         }
       />
@@ -147,9 +145,9 @@ export default function AppRoutes() {
         path="/meals/my-allocations"
         element={
           <ProtectedRoute>
-            <KioskLayout>
+            <AppLayout>
               <MyMealAllocationsPage />
-            </KioskLayout>
+            </AppLayout>
           </ProtectedRoute>
         }
       />
@@ -159,5 +157,3 @@ export default function AppRoutes() {
     </Routes>
   );
 }
-
-

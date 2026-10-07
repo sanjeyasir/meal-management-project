@@ -7,8 +7,7 @@ export default function ProtectedRoute({ children, adminOnly = false }) {
   const location = useLocation();
 
   if (!currentUser) {
-    // If adminOnly route, redirect to admin login. Otherwise redirect to kiosk
-    return <Navigate to={adminOnly ? "/admin/login" : "/kiosk"} state={{ from: location }} replace />;
+    return <Navigate to="/admin/login" state={{ from: location }} replace />;
   }
 
   if (adminOnly && !currentUser.isAdmin) {
@@ -17,4 +16,3 @@ export default function ProtectedRoute({ children, adminOnly = false }) {
 
   return children;
 }
-

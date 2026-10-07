@@ -12,7 +12,8 @@ import {
   TeamOutlined,
   TableOutlined,
   ReloadOutlined,
-  ShoppingOutlined
+  ShoppingOutlined,
+  ArrowRightOutlined
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { getMealAllocations, formatDateKey } from "../../services/firebase/mealService";
@@ -57,39 +58,41 @@ export default function AnalyticsDashboard() {
     const todayStr = formatDateKey(today);
 
     if (timeFilter === "TODAY") {
-      return allocations.filter(a => a.date === todayStr);
+      return allocations.filter((a) => a.date === todayStr);
     }
     if (timeFilter === "WEEK") {
       const weekFromNow = new Date();
       weekFromNow.setDate(today.getDate() + 7);
       const weekStr = formatDateKey(weekFromNow);
-      return allocations.filter(a => a.date >= todayStr && a.date <= weekStr);
+      return allocations.filter((a) => a.date >= todayStr && a.date <= weekStr);
     }
     if (timeFilter === "MONTH") {
       const monthPrefix = todayStr.substring(0, 7); // YYYY-MM
-      return allocations.filter(a => a.date && a.date.startsWith(monthPrefix));
+      return allocations.filter((a) => a.date && a.date.startsWith(monthPrefix));
     }
     return allocations;
   }, [allocations, timeFilter]);
 
   // Aggregated KPIs
   const totalCount = filteredAllocations.length;
-  const receivedCount = filteredAllocations.filter(a => (a.status || "").toLowerCase() === "recieved" || (a.status || "").toLowerCase() === "received").length;
+  const receivedCount = filteredAllocations.filter(
+    (a) => (a.status || "").toLowerCase() === "recieved" || (a.status || "").toLowerCase() === "received"
+  ).length;
   const pendingCount = totalCount - receivedCount;
   const completionRate = totalCount > 0 ? Math.round((receivedCount / totalCount) * 100) : 0;
 
-  const breakfastCount = filteredAllocations.filter(a => a.meal_type === "Breakfast").length;
-  const lunchCount = filteredAllocations.filter(a => a.meal_type === "Lunch").length;
-  const dinnerCount = filteredAllocations.filter(a => a.meal_type === "Dinner").length;
+  const breakfastCount = filteredAllocations.filter((a) => a.meal_type === "Breakfast").length;
+  const lunchCount = filteredAllocations.filter((a) => a.meal_type === "Lunch").length;
+  const dinnerCount = filteredAllocations.filter((a) => a.meal_type === "Dinner").length;
 
-  const freeCount = filteredAllocations.filter(a => (a.pay_category || "").toLowerCase().includes("free")).length;
-  const halfPaidCount = filteredAllocations.filter(a => (a.pay_category || "").toLowerCase().includes("half")).length;
-  const notPaidCount = filteredAllocations.filter(a => (a.pay_category || "").toLowerCase().includes("not")).length;
+  const freeCount = filteredAllocations.filter((a) => (a.pay_category || "").toLowerCase().includes("free")).length;
+  const halfPaidCount = filteredAllocations.filter((a) => (a.pay_category || "").toLowerCase().includes("half")).length;
+  const notPaidCount = filteredAllocations.filter((a) => (a.pay_category || "").toLowerCase().includes("not")).length;
 
   // Department Leaderboard
   const departmentBreakdown = useMemo(() => {
     const map = {};
-    filteredAllocations.forEach(a => {
+    filteredAllocations.forEach((a) => {
       const sec = a.section || "General Operations";
       if (!map[sec]) {
         map[sec] = { name: sec, count: 0, received: 0 };
@@ -110,9 +113,9 @@ export default function AnalyticsDashboard() {
         allocations: filteredAllocations,
         title: "MEAL MANAGEMENT PROJECT - ANALYTICS & CONSUMPTION REPORT",
         dateRangeStr: timeFilter,
-        generatedBy: "Canteen Management"
+        generatedBy: "Canteen Operations Management"
       });
-      message.success("Formatted Excel report generated and downloaded!");
+      message.success("Formatted Excel report downloaded successfully!");
     } catch (err) {
       message.error(`Export failed: ${err.message}`);
     } finally {
@@ -123,10 +126,19 @@ export default function AnalyticsDashboard() {
   return (
     <div style={{ maxWidth: 1250, margin: "0 auto", width: "100%" }}>
       {/* Top Header & Filter */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 14 }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 24,
+          flexWrap: "wrap",
+          gap: 16
+        }}
+      >
         <div>
-          <Title level={2} style={{ margin: 0, fontWeight: 800, color: "#0f172a" }}>
-            Canteen Operations Visualisation
+          <Title level={2} style={{ margin: 0, fontWeight: 800, color: "#0f172a", letterSpacing: "-0.02em" }}>
+            Operations & Consumption Dashboard
           </Title>
           <Text type="secondary" style={{ fontSize: 14 }}>
             Live catering analytics, portion demand breakdown, and department consumption
@@ -137,7 +149,7 @@ export default function AnalyticsDashboard() {
           <Select
             value={timeFilter}
             onChange={setTimeFilter}
-            style={{ width: 160, fontWeight: 600 }}
+            style={{ width: 170, fontWeight: 600 }}
             size="large"
           >
             <Option value="TODAY">📅 Today's Meals</Option>
@@ -158,68 +170,68 @@ export default function AnalyticsDashboard() {
               boxShadow: "0 4px 14px -2px rgba(16, 185, 129, 0.4)"
             }}
           >
-            Download Formatted Excel
+            Download Excel Report
           </Button>
 
-          <Button icon={<ReloadOutlined />} onClick={loadData} loading={loading} size="large" />
+          <Button icon={<ReloadOutlined />} onClick={loadData} loading={loading} size="large" title="Refresh Data" />
         </Space>
       </div>
 
       {/* Top Stat Cards Row */}
       <Row gutter={[20, 20]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12} md={6}>
-          <Card className="glass-card" style={{ borderLeft: "4px solid #3b82f6" }}>
+          <div className="stat-card blue">
             <Statistic
-              title={<span style={{ fontWeight: 600, color: "#64748b" }}>Total Meals Scheduled</span>}
+              title={<span style={{ fontWeight: 600, color: "#64748b", fontSize: 13 }}>Total Meals Scheduled</span>}
               value={totalCount}
-              prefix={<ShoppingOutlined style={{ color: "#3b82f6", marginRight: 6 }} />}
-              valueStyle={{ fontWeight: 800, color: "#1e3a8a" }}
+              prefix={<ShoppingOutlined style={{ color: "#3b82f6", marginRight: 8, fontSize: 20 }} />}
+              valueStyle={{ fontWeight: 800, color: "#0f172a", fontSize: 28 }}
             />
-            <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 4 }}>
-              Active in selected filter
+            <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 6, display: "flex", alignItems: "center", gap: 4 }}>
+              <span>Filtered timeframe</span>
             </div>
-          </Card>
+          </div>
         </Col>
 
         <Col xs={24} sm={12} md={6}>
-          <Card className="glass-card" style={{ borderLeft: "4px solid #10b981" }}>
+          <div className="stat-card green">
             <Statistic
-              title={<span style={{ fontWeight: 600, color: "#64748b" }}>Dispensed (Received)</span>}
+              title={<span style={{ fontWeight: 600, color: "#64748b", fontSize: 13 }}>Dispensed (Received)</span>}
               value={receivedCount}
-              prefix={<CheckCircleOutlined style={{ color: "#10b981", marginRight: 6 }} />}
-              valueStyle={{ fontWeight: 800, color: "#065f46" }}
-              suffix={<span style={{ fontSize: 13, color: "#10b981" }}>({completionRate}%)</span>}
+              prefix={<CheckCircleOutlined style={{ color: "#10b981", marginRight: 8, fontSize: 20 }} />}
+              valueStyle={{ fontWeight: 800, color: "#065f46", fontSize: 28 }}
+              suffix={<span style={{ fontSize: 13, color: "#10b981", fontWeight: 700 }}>({completionRate}%)</span>}
             />
-            <Progress percent={completionRate} size="small" strokeColor="#10b981" showInfo={false} />
-          </Card>
+            <Progress percent={completionRate} size="small" strokeColor="#10b981" showInfo={false} style={{ marginTop: 6 }} />
+          </div>
         </Col>
 
         <Col xs={24} sm={12} md={6}>
-          <Card className="glass-card" style={{ borderLeft: "4px solid #f59e0b" }}>
+          <div className="stat-card amber">
             <Statistic
-              title={<span style={{ fontWeight: 600, color: "#64748b" }}>Pending Dispensing</span>}
+              title={<span style={{ fontWeight: 600, color: "#64748b", fontSize: 13 }}>Pending Dispensing</span>}
               value={pendingCount}
-              prefix={<ClockCircleOutlined style={{ color: "#f59e0b", marginRight: 6 }} />}
-              valueStyle={{ fontWeight: 800, color: "#92400e" }}
+              prefix={<ClockCircleOutlined style={{ color: "#f59e0b", marginRight: 8, fontSize: 20 }} />}
+              valueStyle={{ fontWeight: 800, color: "#92400e", fontSize: 28 }}
             />
-            <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 4 }}>
-              Awaiting employee touch collection
+            <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 6 }}>
+              Awaiting collection
             </div>
-          </Card>
+          </div>
         </Col>
 
         <Col xs={24} sm={12} md={6}>
-          <Card className="glass-card" style={{ borderLeft: "4px solid #8b5cf6" }}>
+          <div className="stat-card purple">
             <Statistic
-              title={<span style={{ fontWeight: 600, color: "#64748b" }}>Registered Workforce</span>}
+              title={<span style={{ fontWeight: 600, color: "#64748b", fontSize: 13 }}>Registered Workforce</span>}
               value={employees.length}
-              prefix={<TeamOutlined style={{ color: "#8b5cf6", marginRight: 6 }} />}
-              valueStyle={{ fontWeight: 800, color: "#4c1d95" }}
+              prefix={<TeamOutlined style={{ color: "#8b5cf6", marginRight: 8, fontSize: 20 }} />}
+              valueStyle={{ fontWeight: 800, color: "#4c1d95", fontSize: 28 }}
             />
-            <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 4 }}>
-              Biometric registered profiles
+            <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 6 }}>
+              Registered employee profiles
             </div>
-          </Card>
+          </div>
         </Col>
       </Row>
 
@@ -232,18 +244,20 @@ export default function AnalyticsDashboard() {
             title={
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontWeight: 800, fontSize: 16 }}>Meal Portion Breakdown</span>
-                <Tag color="cyan">Total: {totalCount}</Tag>
+                <Tag color="cyan" style={{ fontWeight: 700 }}>Total: {totalCount}</Tag>
               </div>
             }
-            className="glass-card"
-            style={{ marginBottom: 24, borderRadius: 16 }}
+            className="modern-card"
+            style={{ marginBottom: 24 }}
           >
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
               {/* Breakfast */}
               <div>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                   <span style={{ fontWeight: 700, color: "#92400e" }}>☕ Breakfast (06:00 - 09:00 AM)</span>
-                  <span style={{ fontWeight: 800 }}>{breakfastCount} portions ({totalCount > 0 ? Math.round((breakfastCount / totalCount) * 100) : 0}%)</span>
+                  <span style={{ fontWeight: 800, color: "#0f172a" }}>
+                    {breakfastCount} portions ({totalCount > 0 ? Math.round((breakfastCount / totalCount) * 100) : 0}%)
+                  </span>
                 </div>
                 <Progress
                   percent={totalCount > 0 ? Math.round((breakfastCount / totalCount) * 100) : 0}
@@ -256,7 +270,9 @@ export default function AnalyticsDashboard() {
               <div>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                   <span style={{ fontWeight: 700, color: "#065f46" }}>🍲 Lunch (11:00 AM - 01:00 PM)</span>
-                  <span style={{ fontWeight: 800 }}>{lunchCount} portions ({totalCount > 0 ? Math.round((lunchCount / totalCount) * 100) : 0}%)</span>
+                  <span style={{ fontWeight: 800, color: "#0f172a" }}>
+                    {lunchCount} portions ({totalCount > 0 ? Math.round((lunchCount / totalCount) * 100) : 0}%)
+                  </span>
                 </div>
                 <Progress
                   percent={totalCount > 0 ? Math.round((lunchCount / totalCount) * 100) : 0}
@@ -269,7 +285,9 @@ export default function AnalyticsDashboard() {
               <div>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                   <span style={{ fontWeight: 700, color: "#991b1b" }}>🍽 Dinner (04:00 - 09:00 PM)</span>
-                  <span style={{ fontWeight: 800 }}>{dinnerCount} portions ({totalCount > 0 ? Math.round((dinnerCount / totalCount) * 100) : 0}%)</span>
+                  <span style={{ fontWeight: 800, color: "#0f172a" }}>
+                    {dinnerCount} portions ({totalCount > 0 ? Math.round((dinnerCount / totalCount) * 100) : 0}%)
+                  </span>
                 </div>
                 <Progress
                   percent={totalCount > 0 ? Math.round((dinnerCount / totalCount) * 100) : 0}
@@ -283,34 +301,33 @@ export default function AnalyticsDashboard() {
           {/* Subsidy Allocation Breakdown */}
           <Card
             title={<span style={{ fontWeight: 800, fontSize: 16 }}>Subsidy & Payment Category Share</span>}
-            className="glass-card"
-            style={{ borderRadius: 16 }}
+            className="modern-card"
           >
             <Row gutter={[16, 16]} style={{ textAlign: "center" }}>
               <Col span={8}>
-                <div style={{ padding: 16, background: "#ecfdf5", borderRadius: 12, border: "1px solid #a7f3d0" }}>
+                <div style={{ padding: "16px 8px", background: "#ecfdf5", borderRadius: 14, border: "1px solid #a7f3d0" }}>
                   <div style={{ fontSize: 24, fontWeight: 800, color: "#065f46" }}>{freeCount}</div>
-                  <div style={{ fontWeight: 700, fontSize: 13, color: "#047857" }}>Free Meals</div>
-                  <div style={{ fontSize: 11, color: "#065f46" }}>
-                    {totalCount > 0 ? Math.round((freeCount / totalCount) * 100) : 0}% of demand
+                  <div style={{ fontWeight: 700, fontSize: 13, color: "#047857", marginTop: 2 }}>Free Meals</div>
+                  <div style={{ fontSize: 11, color: "#059669", marginTop: 2 }}>
+                    {totalCount > 0 ? Math.round((freeCount / totalCount) * 100) : 0}% share
                   </div>
                 </div>
               </Col>
               <Col span={8}>
-                <div style={{ padding: 16, background: "#fffbeb", borderRadius: 12, border: "1px solid #fde68a" }}>
+                <div style={{ padding: "16px 8px", background: "#fffbeb", borderRadius: 14, border: "1px solid #fde68a" }}>
                   <div style={{ fontSize: 24, fontWeight: 800, color: "#92400e" }}>{halfPaidCount}</div>
-                  <div style={{ fontWeight: 700, fontSize: 13, color: "#b45309" }}>Half Paid</div>
-                  <div style={{ fontSize: 11, color: "#92400e" }}>
-                    {totalCount > 0 ? Math.round((halfPaidCount / totalCount) * 100) : 0}% of demand
+                  <div style={{ fontWeight: 700, fontSize: 13, color: "#b45309", marginTop: 2 }}>Half Paid</div>
+                  <div style={{ fontSize: 11, color: "#92400e", marginTop: 2 }}>
+                    {totalCount > 0 ? Math.round((halfPaidCount / totalCount) * 100) : 0}% share
                   </div>
                 </div>
               </Col>
               <Col span={8}>
-                <div style={{ padding: 16, background: "#fef2f2", borderRadius: 12, border: "1px solid #fecaca" }}>
+                <div style={{ padding: "16px 8px", background: "#fef2f2", borderRadius: 14, border: "1px solid #fecaca" }}>
                   <div style={{ fontSize: 24, fontWeight: 800, color: "#991b1b" }}>{notPaidCount}</div>
-                  <div style={{ fontWeight: 700, fontSize: 13, color: "#b91c1c" }}>Not Paid</div>
-                  <div style={{ fontSize: 11, color: "#991b1b" }}>
-                    {totalCount > 0 ? Math.round((notPaidCount / totalCount) * 100) : 0}% of demand
+                  <div style={{ fontWeight: 700, fontSize: 13, color: "#b91c1c", marginTop: 2 }}>Not Paid</div>
+                  <div style={{ fontSize: 11, color: "#991b1b", marginTop: 2 }}>
+                    {totalCount > 0 ? Math.round((notPaidCount / totalCount) * 100) : 0}% share
                   </div>
                 </div>
               </Col>
@@ -318,26 +335,30 @@ export default function AnalyticsDashboard() {
           </Card>
         </Col>
 
-        {/* Right Column: Department Leaderboard & Catering Overview */}
+        {/* Right Column: Department Leaderboard */}
         <Col xs={24} lg={12}>
           <Card
             title={
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontWeight: 800, fontSize: 16 }}>Department Consumption Leaderboard</span>
-                <Button type="link" onClick={() => navigate("/admin/all-allocations")}>
-                  View All Allocations
+                <span style={{ fontWeight: 800, fontSize: 16 }}>Department Consumption</span>
+                <Button
+                  type="link"
+                  onClick={() => navigate("/admin/all-allocations")}
+                  style={{ fontWeight: 600, padding: 0 }}
+                >
+                  View All Allocations →
                 </Button>
               </div>
             }
-            className="glass-card"
-            style={{ borderRadius: 16, height: "100%" }}
+            className="modern-card"
+            style={{ height: "100%" }}
           >
             {departmentBreakdown.length === 0 ? (
-              <div style={{ textAlign: "center", padding: 40, color: "#94a3b8" }}>
+              <div style={{ textAlign: "center", padding: 48, color: "#94a3b8" }}>
                 No meal records in the selected timeframe.
               </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {departmentBreakdown.map((dept, idx) => {
                   const share = totalCount > 0 ? Math.round((dept.count / totalCount) * 100) : 0;
                   const recvRate = dept.count > 0 ? Math.round((dept.received / dept.count) * 100) : 0;
@@ -346,28 +367,28 @@ export default function AnalyticsDashboard() {
                     <div
                       key={dept.name}
                       style={{
-                        padding: "12px 16px",
+                        padding: "14px 16px",
                         background: idx === 0 ? "#f0fdf4" : "#f8fafc",
                         borderRadius: 12,
                         border: idx === 0 ? "1.5px solid #86efac" : "1px solid #e2e8f0"
                       }}
                     >
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <Tag color={idx === 0 ? "green" : "blue"} style={{ fontWeight: 800 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <Tag color={idx === 0 ? "green" : "blue"} style={{ fontWeight: 800, margin: 0 }}>
                             #{idx + 1}
                           </Tag>
-                          <Text strong style={{ fontSize: 14 }}>{dept.name}</Text>
+                          <Text strong style={{ fontSize: 14, color: "#0f172a" }}>{dept.name}</Text>
                         </div>
                         <div style={{ textAlign: "right" }}>
-                          <span style={{ fontWeight: 800, fontSize: 14 }}>{dept.count} Meals</span>
+                          <span style={{ fontWeight: 800, fontSize: 14, color: "#0f172a" }}>{dept.count} Meals</span>
                           <span style={{ fontSize: 12, color: "#64748b", marginLeft: 6 }}>({share}%)</span>
                         </div>
                       </div>
 
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#64748b", marginTop: 4 }}>
-                        <span>Dispensed: <b>{dept.received}</b> / {dept.count}</span>
-                        <span>Dispense Rate: <b>{recvRate}%</b></span>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#64748b", marginTop: 6 }}>
+                        <span>Dispensed: <b style={{ color: "#065f46" }}>{dept.received}</b> / {dept.count}</span>
+                        <span>Dispense Rate: <b style={{ color: "#0f172a" }}>{recvRate}%</b></span>
                       </div>
                     </div>
                   );

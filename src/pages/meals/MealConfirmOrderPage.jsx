@@ -52,7 +52,7 @@ export default function MealConfirmOrderPage() {
     try {
       // 1. Resolve Category Info from Firestore
       const categoryConfig = await getCategoryByName(orderData.category_name || currentUser.category_name);
-      const payCategory = categoryConfig?.configuration_detail || orderData.pay_category || "Free Meal";
+      const payCategory = categoryConfig?.configuration_detail || orderData.pay_category || "Full Paid";
 
       // 2. Batch Create in Firestore
       const outcome = await createMealOrder(payCategory, orderData, currentUser.name);
@@ -151,8 +151,8 @@ export default function MealConfirmOrderPage() {
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <Text type="secondary">Payment Category:</Text>
-                <Tag color="success" style={{ margin: 0, fontWeight: 700 }}>
-                  {orderData.pay_category || "Free Meal"}
+                <Tag color={(orderData.pay_category || "").includes("Half") ? "orange" : (orderData.pay_category || "").includes("Not") ? "red" : "green"} style={{ margin: 0, fontWeight: 700 }}>
+                  {orderData.pay_category || "Full Paid"}
                 </Tag>
               </div>
             </div>

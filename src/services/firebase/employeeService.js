@@ -1,6 +1,6 @@
 import { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, writeBatch, onSnapshot } from "firebase/firestore";
 import { db } from "./config";
-import { seedDefaultCategories } from "./categoryService";
+import { seedDefaultCategories, getCategoryByName, normalizePaymentType } from "./categoryService";
 
 const COLLECTION_NAME = "employees";
 
@@ -10,10 +10,8 @@ export const DEFAULT_EMPLOYEES = [
     name: "Sanjey Asirvatham",
     designation: "Quality Assurance Lead",
     company: "Hayleys Eco Solutions",
-    section: "Quality Management",
     category_employment: "Staff",
-    email: "sanjey.a@hayleys.com",
-    phone: "+94 77 123 4567",
+    pay_category: "Half Paid",
     status: "Active"
   },
   {
@@ -21,10 +19,8 @@ export const DEFAULT_EMPLOYEES = [
     name: "Kasun Perera",
     designation: "Production Supervisor",
     company: "Hayleys Fibre Plant 1",
-    section: "Manufacturing Line A",
     category_employment: "Worker",
-    email: "kasun.p@hayleys.com",
-    phone: "+94 77 234 5678",
+    pay_category: "Full Paid",
     status: "Active"
   },
   {
@@ -32,21 +28,17 @@ export const DEFAULT_EMPLOYEES = [
     name: "Nirosha Jayawardena",
     designation: "Plant General Manager",
     company: "Hayleys Eco Solutions",
-    section: "Executive Management",
     category_employment: "Executive",
-    email: "nirosha.j@hayleys.com",
-    phone: "+94 77 345 6789",
+    pay_category: "Full Paid",
     status: "Active"
   },
   {
     employee_id: "EMP004",
     name: "Mohamed Rizwan",
     designation: "Maintenance Technician",
-    company: "Hayleys Fibre Plant 2",
-    section: "Engineering & Maintenance",
+    company: "Hayleys Fibre Plant 1",
     category_employment: "Worker",
-    email: "rizwan.m@hayleys.com",
-    phone: "+94 77 456 7890",
+    pay_category: "Full Paid",
     status: "Active"
   },
   {
@@ -54,21 +46,17 @@ export const DEFAULT_EMPLOYEES = [
     name: "Dinesh Fernando",
     designation: "Logistics Officer",
     company: "Hayleys Eco Solutions",
-    section: "Supply Chain & Dispatch",
     category_employment: "Staff",
-    email: "dinesh.f@hayleys.com",
-    phone: "+94 77 567 8901",
+    pay_category: "Half Paid",
     status: "Active"
   },
   {
-    employee_id: "1",
+    employee_id: "admin",
     name: "Admin",
     designation: "Admin",
     company: "Hayleys Eco Solutions",
-    section: "Administration",
     category_employment: "Executive",
-    email: "admin@hayleys.com",
-    phone: "+94 11 234 5678",
+    pay_category: "Full Paid",
     status: "Active"
   }
 ];
@@ -274,6 +262,12 @@ export async function saveEmployee(employee, originalEmployeeId = null) {
   const firstName = employee.first_name || (fullName ? fullName.split(" ")[0] : "Employee");
   const lastName = employee.last_name || (fullName && fullName.split(" ").length > 1 ? fullName.split(" ").slice(1).join(" ") : cleanId);
 
+  const resolvedCatName = String(employee.category_employment || employee.category_name || employee.pay_category || "Staff").trim();
+  const categoryConfig = await getCategoryByName(resolvedCatName);
+  const resolvedSubsidy = categoryConfig?.configuration_detail
+    ? normalizePaymentType(categoryConfig.configuration_detail)
+    : normalizePaymentType(employee.pay_category || "Full Paid");
+
   const payload = {
     ...employee,
     id: cleanId,
@@ -285,14 +279,11 @@ export async function saveEmployee(employee, originalEmployeeId = null) {
     last_name: lastName,
     designation: employee.designation?.trim() || "Staff",
     company: employee.company?.trim() || "Hayleys Eco Solutions",
-    section: employee.section?.trim() || "Operations",
-    department: employee.department?.trim() || employee.section?.trim() || "Operations",
-    category_employment: employee.category_employment || employee.pay_category || "Staff",
-    pay_category: employee.pay_category || employee.category_employment || "Staff",
-    status: employee.status || "Active",
-    is_active: employee.status === "Active" || employee.is_active !== false,
-    email: employee.email?.trim() || "",
-    phone: employee.phone?.trim() || "",
+    category_employment: resolvedCatName,
+    category_name: resolvedCatName,
+    pay_category: resolvedSubsidy,
+    status: "Active",
+    is_active: true,
     updated_at: new Date().toISOString()
   };
 
@@ -331,6 +322,7 @@ export async function saveEmployee(employee, originalEmployeeId = null) {
             section: payload.section,
             department: payload.department,
             category_name: payload.category_employment,
+            category_employment: payload.category_employment,
             pay_category: payload.pay_category,
             updated_at: new Date().toISOString()
           });
@@ -344,6 +336,30 @@ export async function saveEmployee(employee, originalEmployeeId = null) {
     // Normal create or in-place update
     const docRef = doc(db, COLLECTION_NAME, cleanId);
     await setDoc(docRef, payload, { merge: true });
+
+    // Cascade update allocations for this employee to keep category/subsidy fresh
+    try {
+      const allocQuery = query(collection(db, "meal_allocations"), where("employee_id", "==", cleanId));
+      const allocSnap = await getDocs(allocQuery);
+      if (!allocSnap.empty) {
+        const batch = writeBatch(db);
+        allocSnap.docs.forEach((d) => {
+          batch.update(d.ref, {
+            employee_name: payload.name,
+            name: payload.name,
+            section: payload.section,
+            department: payload.department,
+            category_name: payload.category_employment,
+            category_employment: payload.category_employment,
+            pay_category: payload.pay_category,
+            updated_at: new Date().toISOString()
+          });
+        });
+        await batch.commit();
+      }
+    } catch (allocErr) {
+      console.warn("Notice: Failed cascading allocation update:", allocErr);
+    }
   }
 
   return { id: cleanId, ...payload };

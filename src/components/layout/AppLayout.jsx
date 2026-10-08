@@ -7,11 +7,14 @@ import {
   SettingOutlined,
   LogoutOutlined,
   MenuOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
   UserOutlined,
   FileExcelOutlined,
   EditOutlined,
   ClockCircleOutlined,
-  SafetyCertificateOutlined
+  SafetyCertificateOutlined,
+  CloudUploadOutlined
 } from "@ant-design/icons";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
@@ -40,7 +43,17 @@ export default function AppLayout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== "undefined" ? window.innerWidth < 768 : false
+  );
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -49,39 +62,49 @@ export default function AppLayout({ children }) {
     return () => clearInterval(timer);
   }, []);
 
-  // Admin Portal Menu items
+  // Admin Portal Menu items with clean string labels for AntD tooltip support when shrunk
   const menuItems = [
     {
       key: "/admin/dashboard",
-      icon: <DashboardOutlined style={{ fontSize: 16 }} />,
-      label: <Link to="/admin/dashboard">Visualisation Dashboard</Link>,
+      icon: <DashboardOutlined style={{ fontSize: 18 }} />,
+      label: "Visualisation Dashboard",
     },
     {
       key: "/admin/allocations-edit",
-      icon: <EditOutlined style={{ fontSize: 16 }} />,
-      label: <Link to="/admin/allocations-edit">Allocations Edit</Link>,
+      icon: <EditOutlined style={{ fontSize: 18 }} />,
+      label: "Allocations Edit",
     },
     {
       key: "/admin/reports",
-      icon: <FileExcelOutlined style={{ fontSize: 16 }} />,
-      label: <Link to="/admin/reports">Formatted Excel Reports</Link>,
+      icon: <FileExcelOutlined style={{ fontSize: 18 }} />,
+      label: "Formatted Excel Reports",
     },
     {
       key: "/admin/all-allocations",
-      icon: <TableOutlined style={{ fontSize: 16 }} />,
-      label: <Link to="/admin/all-allocations">All Allocations Master</Link>,
+      icon: <TableOutlined style={{ fontSize: 18 }} />,
+      label: "All Allocations Master",
     },
     {
       key: "/admin/employees",
-      icon: <TeamOutlined style={{ fontSize: 16 }} />,
-      label: <Link to="/admin/employees">Employees Directory</Link>,
+      icon: <TeamOutlined style={{ fontSize: 18 }} />,
+      label: "Employees Directory",
     },
     {
       key: "/admin/settings",
-      icon: <SettingOutlined style={{ fontSize: 16 }} />,
-      label: <Link to="/admin/settings">Settings & Master Data</Link>,
+      icon: <SettingOutlined style={{ fontSize: 18 }} />,
+      label: "Settings & Master Data",
+    },
+    {
+      key: "/admin/daily-archive",
+      icon: <CloudUploadOutlined style={{ fontSize: 18, color: "#059669" }} />,
+      label: "Daily Archived Reports",
     }
   ];
+
+  const handleMenuClick = ({ key }) => {
+    navigate(key);
+    if (isMobile) setMobileOpen(false);
+  };
 
   // User Dropdown Menu
   const userMenuItems = [
@@ -114,26 +137,28 @@ export default function AppLayout({ children }) {
       {/* Brand Header */}
       <div
         style={{
-          padding: "20px 18px",
+          padding: collapsed && !isMobile ? "18px 0" : "20px 18px",
           display: "flex",
           alignItems: "center",
+          justifyContent: collapsed && !isMobile ? "center" : "flex-start",
           gap: 12,
-          borderBottom: "1px solid #f1f5f9"
+          borderBottom: "1px solid #f1f5f9",
+          transition: "all 0.25s ease"
         }}
       >
         <Avatar
           src="/diet.ico"
-          size={42}
+          size={40}
           style={{
             backgroundColor: "#ecfdf5",
             border: "1.5px solid #10b981",
-            padding: 3,
+            padding: 2,
             flexShrink: 0
           }}
         />
-        {!collapsed && (
+        {(!collapsed || isMobile) && (
           <div style={{ overflow: "hidden", lineHeight: 1.2 }}>
-            <div style={{ fontWeight: 800, fontSize: "1.05rem", color: "#0f172a", whiteSpace: "nowrap" }}>
+            <div style={{ fontWeight: 800, fontSize: "1.02rem", color: "#0f172a", whiteSpace: "nowrap" }}>
               Meal Management
             </div>
             <div style={{ fontSize: "0.75rem", color: "#10b981", fontWeight: 700, letterSpacing: "0.02em", marginTop: 2 }}>
@@ -144,21 +169,20 @@ export default function AppLayout({ children }) {
       </div>
 
       {/* Navigation Menu */}
-      <div style={{ flex: 1, padding: "14px 10px", overflowY: "auto" }}>
+      <div style={{ flex: 1, padding: collapsed && !isMobile ? "14px 4px" : "14px 10px", overflowY: "auto", overflowX: "hidden" }}>
         <Menu
           mode="inline"
+          inlineCollapsed={collapsed && !isMobile}
           selectedKeys={[location.pathname]}
           items={menuItems}
+          onClick={handleMenuClick}
           style={{ borderRight: 0, fontWeight: 500 }}
-          onClick={() => {
-            if (isMobile) setMobileOpen(false);
-          }}
         />
       </div>
 
       {/* Current User Card in Sidebar */}
-      <div style={{ padding: collapsed ? "12px 8px" : "16px", borderTop: "1px solid #f1f5f9", background: "#f8fafc" }}>
-        {!collapsed ? (
+      <div style={{ padding: collapsed && !isMobile ? "16px 8px" : "16px", borderTop: "1px solid #f1f5f9", background: "#f8fafc", transition: "all 0.25s ease" }}>
+        {(!collapsed || isMobile) ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <Avatar style={{ backgroundColor: "#10b981", fontWeight: 700, flexShrink: 0 }}>
@@ -174,16 +198,13 @@ export default function AppLayout({ children }) {
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-              <Tag color="emerald" style={{ margin: 0, fontSize: "0.7rem", fontWeight: 700 }}>
-                {currentUser?.pay_category || "Free Meal"}
-              </Tag>
-              {isAdmin && (
+            {isAdmin && (
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
                 <Tag color="purple" style={{ margin: 0, fontSize: "0.7rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
                   <SafetyCertificateOutlined /> ADMIN
                 </Tag>
-              )}
-            </div>
+              </div>
+            )}
 
             <Button
               danger
@@ -239,7 +260,8 @@ export default function AppLayout({ children }) {
             bottom: 0,
             zIndex: 100,
             background: "#ffffff",
-            borderRight: "1px solid #e2e8f0"
+            borderRight: "1px solid #e2e8f0",
+            transition: "all 0.25s cubic-bezier(0.2, 0, 0, 1)"
           }}
         >
           {sidebarContent}
@@ -264,15 +286,15 @@ export default function AppLayout({ children }) {
           minHeight: "100vh",
           display: "flex",
           flexDirection: "column",
-          transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+          transition: "all 0.25s cubic-bezier(0.2, 0, 0, 1)",
           background: "#f8fafc"
         }}
       >
         {/* Top Header */}
         <Header
           style={{
-            padding: "0 24px",
-            background: "rgba(255, 255, 255, 0.9)",
+            padding: isMobile ? "0 12px" : "0 24px",
+            background: "rgba(255, 255, 255, 0.92)",
             backdropFilter: "blur(12px)",
             WebkitBackdropFilter: "blur(12px)",
             borderBottom: "1px solid #e2e8f0",
@@ -284,42 +306,44 @@ export default function AppLayout({ children }) {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            height: 64,
-            transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)"
+            height: isMobile ? 58 : 64,
+            transition: "all 0.25s cubic-bezier(0.2, 0, 0, 1)"
           }}
         >
-          <Space size="middle">
+          <Space size={isMobile ? "small" : "middle"}>
             <Button
               type="text"
-              icon={<MenuOutlined />}
+              icon={isMobile ? <MenuOutlined /> : (collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />)}
               onClick={() => (isMobile ? setMobileOpen(!mobileOpen) : setCollapsed(!collapsed))}
-              style={{ fontSize: 16, width: 40, height: 40, color: "#0f172a", borderRadius: 8 }}
+              style={{ fontSize: 18, width: 38, height: 38, color: "#0f172a", borderRadius: 8 }}
+              title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             />
-            <span style={{ fontWeight: 800, fontSize: "1.05rem", color: "#0f172a", display: "flex", alignItems: "center", gap: 8 }}>
-              {!isMobile && "Meal Management System"}
+            <span style={{ fontWeight: 800, fontSize: isMobile ? "0.95rem" : "1.05rem", color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}>
+              {isMobile ? "Meal Portal" : "Meal Management System"}
             </span>
-            {currentUser?.company && (
+            {currentUser?.company && !isMobile && (
               <Tag color="cyan" style={{ margin: 0, borderRadius: 6, fontWeight: 600, fontSize: 12 }}>
                 {currentUser.company}
               </Tag>
             )}
           </Space>
 
-          <Space size="middle">
+          <Space size={isMobile ? "small" : "middle"}>
             {/* Live Clock Tag */}
             <Tag
               color="emerald"
               style={{
-                padding: "4px 12px",
+                padding: isMobile ? "3px 8px" : "4px 12px",
                 borderRadius: 8,
-                fontSize: 12,
+                fontSize: isMobile ? 11 : 12,
                 fontWeight: 700,
                 display: "flex",
                 alignItems: "center",
-                gap: 6,
+                gap: 4,
                 background: "#ecfdf5",
                 borderColor: "#a7f3d0",
-                color: "#065f46"
+                color: "#065f46",
+                margin: 0
               }}
             >
               <ClockCircleOutlined />
@@ -332,15 +356,15 @@ export default function AppLayout({ children }) {
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 8,
-                  padding: "4px 10px",
+                  gap: 6,
+                  padding: isMobile ? "2px 6px" : "4px 10px",
                   borderRadius: 10,
                   cursor: "pointer",
                   background: "#f1f5f9",
                   transition: "all 0.2s ease"
                 }}
               >
-                <Avatar size={30} style={{ backgroundColor: "#10b981", fontWeight: 700 }}>
+                <Avatar size={isMobile ? 26 : 30} style={{ backgroundColor: "#10b981", fontWeight: 700 }}>
                   {currentUser?.name ? currentUser.name[0].toUpperCase() : "A"}
                 </Avatar>
                 {!isMobile && (
@@ -357,10 +381,11 @@ export default function AppLayout({ children }) {
         <Content
           className="page-enter"
           style={{
-            margin: "80px 24px 24px 24px",
+            margin: isMobile ? "70px 10px 16px 10px" : "80px 24px 24px 24px",
             flexGrow: 1,
             display: "flex",
-            flexDirection: "column"
+            flexDirection: "column",
+            transition: "all 0.25s cubic-bezier(0.2, 0, 0, 1)"
           }}
         >
           {children}

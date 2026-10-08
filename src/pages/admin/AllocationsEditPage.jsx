@@ -46,7 +46,8 @@ import {
   deleteMealAllocation,
   formatDateKey
 } from "../../services/firebase/mealService";
-import { getDepartments } from "../../services/firebase/departmentService";
+import { getCompanies } from "../../services/firebase/companyService";
+import { normalizePaymentType, getCategories } from "../../services/firebase/categoryService";
 import { formatSriLankaDateTime, formatSriLankaDate } from "../../utils/timeUtils";
 
 const { Title, Text, Paragraph } = Typography;
@@ -59,15 +60,16 @@ export default function AllocationsEditPage() {
   const isMobile = !screens.md; // true if screen width < 768px
 
   const [allocations, setAllocations] = useState([]);
-  const [departments, setDepartments] = useState([]);
+  const [companies, setCompanies] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Filters State
-  const [dateFilterMode, setDateFilterMode] = useState("TODAY"); // "TODAY" | "TOMORROW" | "WEEK" | "ALL" | "CUSTOM"
-  const [customRange, setCustomRange] = useState(null);
+  const [dateRange, setDateRange] = useState(null); // From-To Range [dayjs, dayjs]
   const [statusFilter, setStatusFilter] = useState("ORDERED"); // Default to "ORDERED" so admin immediately sees editable items
   const [mealTypeFilter, setMealTypeFilter] = useState("ALL");
-  const [deptFilter, setDeptFilter] = useState("ALL");
+  const [payCategoryFilter, setPayCategoryFilter] = useState("ALL");
+  const [companyFilter, setCompanyFilter] = useState("ALL");
   const [searchQuery, setSearchQuery] = useState("");
 
   // Edit Modal/Drawer State
@@ -79,12 +81,14 @@ export default function AllocationsEditPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [allAllocations, allDepts] = await Promise.all([
+      const [allAllocations, allComps, allCats] = await Promise.all([
         getMealAllocations(),
-        getDepartments()
+        getCompanies(),
+        getCategories()
       ]);
       setAllocations(allAllocations);
-      setDepartments(allDepts);
+      setCompanies(allComps);
+      setCategories(allCats);
     } catch (err) {
       console.error("Error loading allocations:", err);
       message.error("Failed to load meal allocations.");
@@ -99,28 +103,11 @@ export default function AllocationsEditPage() {
 
   // Compute filtered allocations
   const filteredAllocations = useMemo(() => {
-    const today = new Date();
-    const todayStr = formatDateKey(today);
-
-    const tomorrow = new Date();
-    tomorrow.setDate(today.getDate() + 1);
-    const tomorrowStr = formatDateKey(tomorrow);
-
-    const weekAhead = new Date();
-    weekAhead.setDate(today.getDate() + 7);
-    const weekAheadStr = formatDateKey(weekAhead);
-
     return allocations.filter((item) => {
-      // 1. Date Filter
-      if (dateFilterMode === "TODAY") {
-        if (item.date !== todayStr) return false;
-      } else if (dateFilterMode === "TOMORROW") {
-        if (item.date !== tomorrowStr) return false;
-      } else if (dateFilterMode === "WEEK") {
-        if (item.date < todayStr || item.date > weekAheadStr) return false;
-      } else if (dateFilterMode === "CUSTOM" && customRange && customRange[0] && customRange[1]) {
-        const startStr = customRange[0].format("YYYY-MM-DD");
-        const endStr = customRange[1].format("YYYY-MM-DD");
+      // 1. From-To Date Range Filter
+      if (dateRange && dateRange[0] && dateRange[1]) {
+        const startStr = dateRange[0].format("YYYY-MM-DD");
+        const endStr = dateRange[1].format("YYYY-MM-DD");
         if (item.date < startStr || item.date > endStr) return false;
       }
 
@@ -134,23 +121,30 @@ export default function AllocationsEditPage() {
         if ((item.meal_type || "").toLowerCase() !== mealTypeFilter.toLowerCase()) return false;
       }
 
-      // 4. Department Filter
-      if (deptFilter !== "ALL") {
-        if ((item.section || "").toLowerCase() !== deptFilter.toLowerCase()) return false;
+      // 4. Pay Category / Subsidy Filter
+      const itemPayNorm = normalizePaymentType(item.pay_category || item.category_employment);
+      if (payCategoryFilter !== "ALL") {
+        if (itemPayNorm.toLowerCase() !== payCategoryFilter.toLowerCase()) return false;
       }
 
-      // 5. Search Text (Name, ID, Section)
+      // 5. Company Filter
+      if (companyFilter !== "ALL") {
+        if ((item.company || "").toLowerCase() !== companyFilter.toLowerCase()) return false;
+      }
+
+      // 6. Search Text (Name, ID, Company)
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const name = (item.employee_name || "").toLowerCase();
         const empId = (item.employee_id || "").toLowerCase();
-        const sec = (item.section || "").toLowerCase();
-        if (!name.includes(q) && !empId.includes(q) && !sec.includes(q)) return false;
+        const comp = (item.company || "").toLowerCase();
+        const cat = (item.category_name || item.category_employment || "").toLowerCase();
+        if (!name.includes(q) && !empId.includes(q) && !comp.includes(q) && !cat.includes(q)) return false;
       }
 
       return true;
     });
-  }, [allocations, dateFilterMode, customRange, statusFilter, mealTypeFilter, deptFilter, searchQuery]);
+  }, [allocations, dateRange, statusFilter, mealTypeFilter, payCategoryFilter, companyFilter, searchQuery]);
 
   // Open Edit Modal / Drawer
   const handleOpenEdit = (record) => {
@@ -160,11 +154,15 @@ export default function AllocationsEditPage() {
       return;
     }
 
+    const catName = record.category_name || record.category_employment || "Staff";
+    const normPay = normalizePaymentType(record.pay_category || record.category_employment);
+
     setSelectedAllocation(record);
     form.setFieldsValue({
       date: dayjs(record.date),
       meal_type: record.meal_type || "Lunch",
-      pay_category: record.pay_category || "Free Meal"
+      category_name: catName,
+      pay_category: normPay
     });
     setEditDrawerOpen(true);
   };
@@ -176,10 +174,15 @@ export default function AllocationsEditPage() {
     setSaving(true);
     try {
       const newDateStr = values.date.format("YYYY-MM-DD");
+      const normalizedPay = normalizePaymentType(values.pay_category);
+      const catName = values.category_name || selectedAllocation.category_name || selectedAllocation.category_employment || "Staff";
+
       const res = await updateMealAllocation(selectedAllocation.id, {
         date: newDateStr,
         meal_type: values.meal_type,
-        pay_category: values.pay_category
+        category_name: catName,
+        category_employment: catName,
+        pay_category: normalizedPay
       });
 
       if (res.success) {
@@ -214,67 +217,116 @@ export default function AllocationsEditPage() {
     }
   };
 
+  const handleQuickPreset = (days) => {
+    if (days === 0) {
+      const today = dayjs();
+      setDateRange([today, today]);
+    } else if (days === 1) {
+      const tomorrow = dayjs().add(1, "day");
+      setDateRange([tomorrow, tomorrow]);
+    } else if (days === 7) {
+      setDateRange([dayjs(), dayjs().add(7, "day")]);
+    }
+  };
+
+  // Category to Subsidy Map
+  const categoryMap = useMemo(() => {
+    const map = {};
+    (categories || []).forEach((c) => {
+      if (c.category_name) {
+        map[c.category_name.toLowerCase()] = c.configuration_detail;
+      }
+    });
+    return map;
+  }, [categories]);
+
+  const getAutoSubsidy = (item) => {
+    const catName = (item.category_name || item.category_employment || "Staff").trim();
+    const masterSubsidy = categoryMap[catName.toLowerCase()] || item.pay_category;
+    return normalizePaymentType(masterSubsidy);
+  };
+
   // Status Metrics
   const editableCount = allocations.filter(
     (a) => (a.status || "").toLowerCase() !== "recieved" && (a.status || "").toLowerCase() !== "received"
   ).length;
   const dispensedCount = allocations.length - editableCount;
 
-  // Desktop Table Columns
+  // Desktop Table Columns (Consistent across all allocation master tables)
   const tableColumns = [
     {
       title: "Date",
       dataIndex: "date",
       key: "date",
-      width: 120,
+      width: 115,
+      fixed: "left",
       render: (d) => <Text strong style={{ color: "#0f172a" }}>{d}</Text>,
-      sorter: (a, b) => a.date.localeCompare(b.date)
+      sorter: (a, b) => (a.date || "").localeCompare(b.date || "")
     },
     {
-      title: "Employee Details",
-      key: "employee",
-      render: (_, r) => (
-        <div>
-          <div style={{ fontWeight: 700, color: "#1e293b", fontSize: "0.95rem" }}>
-            {r.employee_name}
-          </div>
-          <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 2 }}>
-            <Tag color="blue" style={{ margin: 0, fontWeight: 700, fontSize: "0.75rem" }}>
-              {r.employee_id}
-            </Tag>
-            <Text type="secondary" style={{ fontSize: "0.8rem" }}>
-              {r.section || "General"}
-            </Text>
-          </div>
-        </div>
-      )
+      title: "Employee ID",
+      dataIndex: "employee_id",
+      key: "employee_id",
+      width: 130,
+      fixed: "left",
+      render: (id) => (
+        <Tag color="blue" style={{ fontWeight: 700, padding: "2px 8px" }}>
+          {id}
+        </Tag>
+      ),
+      sorter: (a, b) => String(a.employee_id || "").localeCompare(String(b.employee_id || ""))
+    },
+    {
+      title: "Full Name",
+      dataIndex: "employee_name",
+      key: "employee_name",
+      width: 200,
+      render: (name) => <span style={{ fontWeight: 700, color: "#0f172a" }}>{name || "Staff"}</span>,
+      sorter: (a, b) => (a.employee_name || "").localeCompare(b.employee_name || "")
+    },
+    {
+      title: "Company",
+      dataIndex: "company",
+      key: "company",
+      width: 220,
+      render: (comp) => <Tag color="geekblue" style={{ fontWeight: 600 }}>{comp || "Hayleys Eco Solutions"}</Tag>
+    },
+    {
+      title: "Meal Category",
+      dataIndex: "category_name",
+      key: "category_name",
+      width: 130,
+      render: (cat, r) => <Tag color="cyan" style={{ fontWeight: 600 }}>{cat || r.category_employment || "Staff"}</Tag>
+    },
+    {
+      title: "Payment Plan",
+      key: "pay_category",
+      width: 140,
+      render: (_, r) => {
+        const norm = getAutoSubsidy(r);
+        const color = norm === "Full Paid" ? "green" : norm === "Half Paid" ? "orange" : "red";
+        return <Tag color={color} style={{ fontWeight: 700 }}>{norm}</Tag>;
+      }
     },
     {
       title: "Meal Slot",
       dataIndex: "meal_type",
       key: "meal_type",
-      width: 130,
+      width: 120,
       render: (type) => {
         const icon = type === "Breakfast" ? "☕" : type === "Lunch" ? "🍲" : "🍽️";
         const color = type === "Breakfast" ? "orange" : type === "Lunch" ? "green" : "purple";
         return (
-          <Tag color={color} style={{ fontSize: "0.85rem", padding: "3px 8px", borderRadius: 6 }}>
+          <Tag color={color} style={{ fontSize: "0.85rem", padding: "3px 8px", borderRadius: 6, fontWeight: 700 }}>
             {icon} {type}
           </Tag>
         );
       }
     },
     {
-      title: "Category",
-      dataIndex: "pay_category",
-      key: "pay_category",
-      width: 130,
-      render: (cat) => <Tag color="cyan">{cat || "Free Meal"}</Tag>
-    },
-    {
-      title: "Status & Lock",
+      title: "Status",
       key: "status",
-      width: 170,
+      width: 140,
       render: (_, r) => {
         const isReceived = (r.status || "").toLowerCase() === "recieved" || (r.status || "").toLowerCase() === "received";
         if (isReceived) {
@@ -297,17 +349,17 @@ export default function AllocationsEditPage() {
       title: "Created At (SL Time)",
       dataIndex: "created_at",
       key: "created_at",
-      width: 190,
+      width: 180,
       render: (dt) => (
-        <Text type="secondary" style={{ fontSize: "0.8rem" }}>
+        <span style={{ fontSize: "0.85rem", color: "#475569" }}>
           {formatSriLankaDateTime(dt)}
-        </Text>
+        </span>
       )
     },
     {
       title: "Actions",
       key: "actions",
-      width: 160,
+      width: 150,
       fixed: "right",
       render: (_, record) => {
         const isReceived = (record.status || "").toLowerCase() === "recieved" || (record.status || "").toLowerCase() === "received";
@@ -365,81 +417,50 @@ export default function AllocationsEditPage() {
   ];
 
   return (
-    <div style={{ maxWidth: 1300, margin: "0 auto", width: "100%" }}>
-      {/* Header Banner */}
-      <Card
-        bordered={false}
-        style={{
-          borderRadius: 16,
-          background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
-          color: "#ffffff",
-          marginBottom: 20,
-          boxShadow: "0 10px 25px -5px rgba(15, 23, 42, 0.3)"
-        }}
-        bodyStyle={{ padding: isMobile ? "16px" : "24px 32px" }}
-      >
-        <Row justify="space-between" align="middle" gutter={[16, 16]}>
-          <Col xs={24} md={16}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div
-                style={{
-                  background: "rgba(16, 185, 129, 0.2)",
-                  border: "1px solid #10b981",
-                  borderRadius: 12,
-                  padding: 10,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
-                }}
-              >
-                <EditOutlined style={{ fontSize: 24, color: "#10b981" }} />
-              </div>
-              <div>
-                <Title level={isMobile ? 4 : 3} style={{ color: "#ffffff", margin: 0, fontWeight: 800 }}>
-                  Meal Allocations Editor
-                </Title>
-                <Text style={{ color: "#94a3b8", fontSize: isMobile ? "0.8rem" : "0.9rem" }}>
-                  Admin control panel to modify, reschedule, or cancel ordered meals before canteen dispensing.
-                </Text>
-              </div>
-            </div>
-          </Col>
-          <Col xs={24} md={8} style={{ textAlign: isMobile ? "left" : "right" }}>
-            <Space wrap size="middle">
-              <Tag
-                color="blue"
-                style={{
-                  padding: "6px 14px",
-                  borderRadius: 10,
-                  fontSize: "0.85rem",
-                  fontWeight: 700,
-                  background: "rgba(59, 130, 246, 0.15)",
-                  border: "1px solid rgba(59, 130, 246, 0.4)",
-                  color: "#93c5fd"
-                }}
-              >
-                ✏️ {editableCount} Editable (Ordered)
-              </Tag>
-              <Tag
-                color="green"
-                style={{
-                  padding: "6px 14px",
-                  borderRadius: 10,
-                  fontSize: "0.85rem",
-                  fontWeight: 700,
-                  background: "rgba(16, 185, 129, 0.15)",
-                  border: "1px solid rgba(16, 185, 129, 0.4)",
-                  color: "#6ee7b7"
-                }}
-              >
-                🔒 {dispensedCount} Dispensed (Locked)
-              </Tag>
-            </Space>
-          </Col>
-        </Row>
-      </Card>
+    <div style={{ maxWidth: 1600, margin: "0 auto", width: "100%" }}>
+      {/* Header Banner with Clean Dark Slate / Black Text */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 14 }}>
+        <div>
+          <Title level={2} style={{ margin: 0, fontWeight: 800, color: "#0f172a" }}>
+            Meal Allocations Editor
+          </Title>
+          <Text type="secondary" style={{ fontSize: 14, color: "#475569" }}>
+            Modify, reschedule, or cancel pending meal allocations before canteen dispensing.
+          </Text>
+        </div>
 
-      {/* Filter Control Bar */}
+        <Space size="middle" wrap>
+          <Tag
+            color="blue"
+            style={{
+              padding: "6px 14px",
+              borderRadius: 8,
+              fontSize: "0.85rem",
+              fontWeight: 700,
+              color: "#1e40af"
+            }}
+          >
+            ✏️ {editableCount} Editable (Ordered)
+          </Tag>
+          <Tag
+            color="green"
+            style={{
+              padding: "6px 14px",
+              borderRadius: 8,
+              fontSize: "0.85rem",
+              fontWeight: 700,
+              color: "#065f46"
+            }}
+          >
+            🔒 {dispensedCount} Dispensed (Locked)
+          </Tag>
+          <Button icon={<ReloadOutlined />} onClick={loadData} loading={loading} style={{ borderRadius: 8 }}>
+            Refresh
+          </Button>
+        </Space>
+      </div>
+
+      {/* Filter Control Bar with Prominent From - To Date Range */}
       <Card
         bordered={false}
         style={{
@@ -450,35 +471,36 @@ export default function AllocationsEditPage() {
         bodyStyle={{ padding: "16px 20px" }}
       >
         <Row gutter={[12, 12]} align="middle">
-          {/* Quick Date Segment */}
-          <Col xs={24} lg={9}>
-            <Radio.Group
-              value={dateFilterMode}
-              onChange={(e) => setDateFilterMode(e.target.value)}
-              buttonStyle="solid"
-              style={{ width: "100%", display: "flex", flexWrap: "wrap" }}
-            >
-              <Radio.Button value="TODAY" style={{ flex: 1, textAlign: "center" }}>Today</Radio.Button>
-              <Radio.Button value="TOMORROW" style={{ flex: 1, textAlign: "center" }}>Tomorrow</Radio.Button>
-              <Radio.Button value="WEEK" style={{ flex: 1, textAlign: "center" }}>7 Days</Radio.Button>
-              <Radio.Button value="ALL" style={{ flex: 1, textAlign: "center" }}>All</Radio.Button>
-              <Radio.Button value="CUSTOM" style={{ flex: 1, textAlign: "center" }}>Custom</Radio.Button>
-            </Radio.Group>
+          {/* From-To Date Range */}
+          <Col xs={24} sm={12} lg={7}>
+            <Text strong style={{ display: "block", marginBottom: 6, fontSize: 13, color: "#0f172a" }}>
+              📅 From - To Date Range:
+            </Text>
+            <RangePicker
+              style={{ width: "100%" }}
+              value={dateRange}
+              onChange={setDateRange}
+              placeholder={["From Date", "To Date"]}
+            />
           </Col>
 
-          {dateFilterMode === "CUSTOM" && (
-            <Col xs={24} sm={12} lg={5}>
-              <RangePicker
-                style={{ width: "100%" }}
-                value={customRange}
-                onChange={setCustomRange}
-                placeholder={["Start Date", "End Date"]}
-              />
-            </Col>
-          )}
+          {/* Quick Presets */}
+          <Col xs={24} sm={12} lg={5}>
+            <Text strong style={{ display: "block", marginBottom: 6, fontSize: 13, color: "#0f172a" }}>
+              Quick Presets:
+            </Text>
+            <Space size="small" wrap>
+              <Button size="small" onClick={() => handleQuickPreset(0)}>Today</Button>
+              <Button size="small" onClick={() => handleQuickPreset(1)}>Tomorrow</Button>
+              <Button size="small" onClick={() => handleQuickPreset(7)}>Next 7 Days</Button>
+            </Space>
+          </Col>
 
           {/* Status Filter */}
           <Col xs={12} sm={6} lg={4}>
+            <Text strong style={{ display: "block", marginBottom: 6, fontSize: 13, color: "#0f172a" }}>
+              Status:
+            </Text>
             <Select
               value={statusFilter}
               onChange={setStatusFilter}
@@ -492,6 +514,9 @@ export default function AllocationsEditPage() {
 
           {/* Meal Slot Filter */}
           <Col xs={12} sm={6} lg={3}>
+            <Text strong style={{ display: "block", marginBottom: 6, fontSize: 13, color: "#0f172a" }}>
+              Slot:
+            </Text>
             <Select
               value={mealTypeFilter}
               onChange={setMealTypeFilter}
@@ -504,8 +529,28 @@ export default function AllocationsEditPage() {
             </Select>
           </Col>
 
+          {/* Subsidy Filter */}
+          <Col xs={12} sm={6} lg={3}>
+            <Text strong style={{ display: "block", marginBottom: 6, fontSize: 13, color: "#0f172a" }}>
+              Subsidy:
+            </Text>
+            <Select
+              value={payCategoryFilter}
+              onChange={setPayCategoryFilter}
+              style={{ width: "100%" }}
+            >
+              <Option value="ALL">All Plans</Option>
+              <Option value="Full Paid">Full Paid</Option>
+              <Option value="Half Paid">Half Paid</Option>
+              <Option value="Not Paid">Not Paid</Option>
+            </Select>
+          </Col>
+
           {/* Search Box */}
-          <Col xs={20} sm={8} lg={6}>
+          <Col xs={24} sm={12} lg={6}>
+            <Text strong style={{ display: "block", marginBottom: 6, fontSize: 13, color: "#0f172a" }}>
+              Search Employee:
+            </Text>
             <Input
               placeholder="Search employee, ID, section..."
               prefix={<SearchOutlined style={{ color: "#94a3b8" }} />}
@@ -515,15 +560,39 @@ export default function AllocationsEditPage() {
             />
           </Col>
 
-          {/* Refresh Button */}
-          <Col xs={4} sm={4} lg={2} style={{ textAlign: "right" }}>
+          {/* Company Filter */}
+          <Col xs={12} sm={6} lg={4}>
+            <Text strong style={{ display: "block", marginBottom: 6, fontSize: 13, color: "#0f172a" }}>
+              Company / Plant:
+            </Text>
+            <Select
+              value={companyFilter}
+              onChange={setCompanyFilter}
+              style={{ width: "100%" }}
+            >
+              <Option value="ALL">All Companies</Option>
+              {companies.map((c) => (
+                <Option key={c.name} value={c.name}>
+                  {c.name}
+                </Option>
+              ))}
+            </Select>
+          </Col>
+
+          <Col xs={12} sm={6} lg={2} style={{ display: "flex", alignItems: "flex-end" }}>
             <Button
-              icon={<ReloadOutlined />}
-              onClick={loadData}
-              loading={loading}
-              title="Refresh Data"
-              style={{ borderRadius: 8 }}
-            />
+              onClick={() => {
+                setDateRange(null);
+                setStatusFilter("ORDERED");
+                setMealTypeFilter("ALL");
+                setPayCategoryFilter("ALL");
+                setDeptFilter("ALL");
+                setSearchQuery("");
+              }}
+              style={{ width: "100%", borderRadius: 8, height: 38, marginTop: 22 }}
+            >
+              Reset
+            </Button>
           </Col>
         </Row>
       </Card>
@@ -540,6 +609,7 @@ export default function AllocationsEditPage() {
             filteredAllocations.map((item) => {
               const isReceived = (item.status || "").toLowerCase() === "recieved" || (item.status || "").toLowerCase() === "received";
               const mealIcon = item.meal_type === "Breakfast" ? "☕" : item.meal_type === "Lunch" ? "🍲" : "🍽️";
+              const normPay = normalizePaymentType(item.pay_category || item.category_employment);
 
               return (
                 <Card
@@ -553,7 +623,7 @@ export default function AllocationsEditPage() {
                   }}
                   bodyStyle={{ padding: 16 }}
                 >
-                  {/* Card Header: Date + Meal Slot + Status Badge */}
+                  {/* Card Header */}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                     <div>
                       <span style={{ fontWeight: 800, fontSize: "1.05rem", color: "#0f172a" }}>
@@ -580,17 +650,17 @@ export default function AllocationsEditPage() {
 
                   {/* Employee Details */}
                   <div style={{ marginBottom: 12 }}>
-                    <div style={{ fontWeight: 700, fontSize: "1rem", color: "#1e293b" }}>
+                    <div style={{ fontWeight: 700, fontSize: "1rem", color: "#0f172a" }}>
                       {item.employee_name}
                     </div>
-                    <div style={{ fontSize: "0.85rem", color: "#64748b", marginTop: 2 }}>
+                    <div style={{ fontSize: "0.85rem", color: "#475569", marginTop: 2 }}>
                       <Tag color="blue" style={{ margin: 0, fontSize: "0.75rem", fontWeight: 700 }}>{item.employee_id}</Tag>
-                      {" "}• {item.section || "Operations"} • {item.pay_category || "Free Meal"}
+                      {" "}• {item.section || "Operations"} • <Tag color={normPay === "Full Paid" ? "green" : normPay === "Half Paid" ? "orange" : "red"}>{normPay}</Tag>
                     </div>
                   </div>
 
                   {/* Timestamp info */}
-                  <div style={{ fontSize: "0.75rem", color: "#94a3b8", background: "#f8fafc", padding: "6px 10px", borderRadius: 8, marginBottom: 14 }}>
+                  <div style={{ fontSize: "0.75rem", color: "#64748b", background: "#f8fafc", padding: "6px 10px", borderRadius: 8, marginBottom: 14 }}>
                     <div>📅 Created: {formatSriLankaDateTime(item.created_at)}</div>
                     {item.received_at && (
                       <div style={{ color: "#059669", fontWeight: 600, marginTop: 2 }}>
@@ -656,19 +726,18 @@ export default function AllocationsEditPage() {
           bodyStyle={{ padding: "0" }}
         >
           <Table
+            bordered
+            size="middle"
             columns={tableColumns}
             dataSource={filteredAllocations}
             rowKey="id"
             loading={loading}
+            scroll={{ x: 1450 }}
             pagination={{
               pageSize: 15,
               showSizeChanger: true,
               pageSizeOptions: ["10", "15", "25", "50"],
               showTotal: (total) => `Total ${total} Allocations`
-            }}
-            rowClassName={(record) => {
-              const isRecv = (record.status || "").toLowerCase() === "recieved" || (record.status || "").toLowerCase() === "received";
-              return isRecv ? "row-dispensed" : "row-ordered";
             }}
           />
         </Card>
@@ -680,7 +749,7 @@ export default function AllocationsEditPage() {
           title={
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <EditOutlined style={{ color: "#0284c7" }} />
-              <span>Edit Meal Allocation</span>
+              <span style={{ fontWeight: 800, color: "#0f172a" }}>Edit Meal Allocation</span>
             </div>
           }
           placement="bottom"
@@ -693,6 +762,7 @@ export default function AllocationsEditPage() {
             <EditAllocationForm
               allocation={selectedAllocation}
               form={form}
+              categories={categories}
               onFinish={handleSaveEdit}
               saving={saving}
               onCancel={() => setEditDrawerOpen(false)}
@@ -704,19 +774,20 @@ export default function AllocationsEditPage() {
           title={
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <EditOutlined style={{ color: "#0284c7", fontSize: 20 }} />
-              <span style={{ fontWeight: 800, fontSize: "1.1rem" }}>Edit Meal Allocation</span>
+              <span style={{ fontWeight: 800, fontSize: "1.1rem", color: "#0f172a" }}>Edit Meal Allocation</span>
             </div>
           }
           open={editDrawerOpen}
           onCancel={() => setEditDrawerOpen(false)}
           footer={null}
-          width={520}
+          width={540}
           destroyOnClose
         >
           {selectedAllocation && (
             <EditAllocationForm
               allocation={selectedAllocation}
               form={form}
+              categories={categories}
               onFinish={handleSaveEdit}
               saving={saving}
               onCancel={() => setEditDrawerOpen(false)}
@@ -731,7 +802,7 @@ export default function AllocationsEditPage() {
 /**
  * Reusable Form inside Edit Modal/Drawer
  */
-function EditAllocationForm({ allocation, form, onFinish, saving, onCancel }) {
+function EditAllocationForm({ allocation, form, categories, onFinish, saving, onCancel }) {
   return (
     <div>
       {/* Employee Info Read-Only Banner */}
@@ -749,7 +820,7 @@ function EditAllocationForm({ allocation, form, onFinish, saving, onCancel }) {
             <div style={{ fontWeight: 800, color: "#0f172a", fontSize: "1rem" }}>
               {allocation.employee_name}
             </div>
-            <div style={{ fontSize: "0.8rem", color: "#64748b" }}>
+            <div style={{ fontSize: "0.8rem", color: "#475569" }}>
               ID: <b>{allocation.employee_id}</b> • Dept: {allocation.section || "Operations"}
             </div>
           </div>
@@ -763,7 +834,7 @@ function EditAllocationForm({ allocation, form, onFinish, saving, onCancel }) {
         {/* Date Field */}
         <Form.Item
           name="date"
-          label={<Text strong>Allocation Date</Text>}
+          label={<span style={{ fontWeight: 600, color: "#0f172a" }}>Allocation Date</span>}
           rules={[{ required: true, message: "Please select the allocation date" }]}
         >
           <DatePicker style={{ width: "100%", height: 42, borderRadius: 8 }} />
@@ -772,7 +843,7 @@ function EditAllocationForm({ allocation, form, onFinish, saving, onCancel }) {
         {/* Meal Slot Selection */}
         <Form.Item
           name="meal_type"
-          label={<Text strong>Meal Slot</Text>}
+          label={<span style={{ fontWeight: 600, color: "#0f172a" }}>Meal Slot</span>}
           rules={[{ required: true, message: "Please choose a meal slot" }]}
         >
           <Radio.Group style={{ width: "100%" }} buttonStyle="solid">
@@ -796,18 +867,49 @@ function EditAllocationForm({ allocation, form, onFinish, saving, onCancel }) {
           </Radio.Group>
         </Form.Item>
 
-        {/* Subsidy Plan / Payment Category */}
-        <Form.Item
-          name="pay_category"
-          label={<Text strong>Subsidy Plan / Category</Text>}
-          rules={[{ required: true, message: "Please select payment category" }]}
-        >
-          <Select style={{ width: "100%", height: 42 }}>
-            <Option value="Free Meal">Free Meal</Option>
-            <Option value="Half Paid">Half Paid</Option>
-            <Option value="Not Paid">Not Paid</Option>
-          </Select>
-        </Form.Item>
+        {/* Category & Subsidy Row */}
+        <Row gutter={12}>
+          <Col span={12}>
+            <Form.Item
+              name="category_name"
+              label={<span style={{ fontWeight: 600, color: "#0f172a" }}>Employee Category</span>}
+              rules={[{ required: true, message: "Please select category" }]}
+            >
+              <Select
+                placeholder="Select category"
+                onChange={(catVal) => {
+                  const match = (categories || []).find(
+                    (c) => c.category_name?.toLowerCase() === String(catVal).toLowerCase()
+                  );
+                  if (match) {
+                    form.setFieldsValue({
+                      pay_category: normalizePaymentType(match.configuration_detail)
+                    });
+                  }
+                }}
+              >
+                {(categories || []).map((c) => (
+                  <Option key={c.category_name} value={c.category_name}>
+                    {c.category_name} ({c.configuration_detail})
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item
+              name="pay_category"
+              label={<span style={{ fontWeight: 600, color: "#0f172a" }}>Payment Plan</span>}
+              rules={[{ required: true, message: "Please select payment subsidy" }]}
+            >
+              <Select placeholder="Select subsidy plan">
+                <Option value="Full Paid">Full Paid (100% Subsidized)</Option>
+                <Option value="Half Paid">Half Paid (50% Subsidized)</Option>
+                <Option value="Not Paid">Not Paid (Unsubsidized)</Option>
+              </Select>
+            </Form.Item>
+          </Col>
+        </Row>
 
         {/* Safety Warning */}
         <div
@@ -821,7 +923,7 @@ function EditAllocationForm({ allocation, form, onFinish, saving, onCancel }) {
             marginBottom: 20
           }}
         >
-          ℹ️ Changes will immediately reflect in the Canteen Dispensing terminal and employee records.
+          ℹ️ Changes will immediately reflect in the Canteen Dispensing terminal, reports, and archive exports.
         </div>
 
         {/* Footer Actions */}

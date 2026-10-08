@@ -143,27 +143,71 @@ body {
   box-shadow: 0 6px 16px -2px rgba(16, 185, 129, 0.45) !important;
 }
 
+/* Spreadsheet / Hands-on Table Grid Styling */
 .ant-table-wrapper .ant-table {
   border-radius: 12px !important;
-  border: 1px solid #f1f5f9;
+  border: 1px solid #e2e8f0 !important;
+  background: #ffffff !important;
 }
 
 .ant-table-thead > tr > th {
   background: #f8fafc !important;
-  color: #475569 !important;
+  color: #1e293b !important;
   font-weight: 700 !important;
   font-size: 13px !important;
-  border-bottom: 1px solid #e2e8f0 !important;
-  padding: 14px 16px !important;
+  border-bottom: 2px solid #cbd5e1 !important;
+  border-right: 1px solid #e2e8f0 !important;
+  padding: 12px 14px !important;
+  white-space: nowrap !important;
+  letter-spacing: 0.01em;
 }
 
 .ant-table-tbody > tr > td {
-  padding: 14px 16px !important;
-  border-bottom: 1px solid #f8fafc !important;
+  padding: 11px 14px !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  border-right: 1px solid #f1f5f9 !important;
+  color: #1e293b;
+  font-size: 13px;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.ant-table-tbody > tr:nth-child(even) > td {
+  background-color: #fafbfc;
 }
 
 .ant-table-tbody > tr:hover > td {
+  background-color: #f0fdf4 !important;
+}
+
+/* Frozen / Fixed Left Column Pinning & Divider Shadow */
+.ant-table-cell-fix-left,
+.ant-table-cell-fix-left-last {
+  background: #ffffff !important;
+  z-index: 3 !important;
+}
+
+.ant-table-thead .ant-table-cell-fix-left,
+.ant-table-thead .ant-table-cell-fix-left-last {
   background: #f8fafc !important;
+}
+
+.ant-table-tbody > tr:nth-child(even) > .ant-table-cell-fix-left,
+.ant-table-tbody > tr:nth-child(even) > .ant-table-cell-fix-left-last {
+  background: #fafbfc !important;
+}
+
+.ant-table-tbody > tr:hover > .ant-table-cell-fix-left,
+.ant-table-tbody > tr:hover > .ant-table-cell-fix-left-last {
+  background: #f0fdf4 !important;
+}
+
+.ant-table-cell-fix-left-last::after {
+  box-shadow: inset 10px 0 8px -8px rgba(0, 0, 0, 0.15) !important;
+}
+
+.ant-table-cell-fix-right-first::after {
+  box-shadow: inset -10px 0 8px -8px rgba(0, 0, 0, 0.15) !important;
 }
 
 .ant-menu-light .ant-menu-item-selected {
@@ -210,3 +254,73 @@ body {
 .page-enter {
   animation: fadeIn 0.3s ease-out forwards;
 }
+
+/* Mobile Responsiveness & Touch Optimization */
+@media (max-width: 768px) {
+  h1.ant-typography, .ant-typography h1, h2.ant-typography, .ant-typography h2 {
+    font-size: 1.35rem !important;
+    line-height: 1.3 !important;
+  }
+
+  h3.ant-typography, .ant-typography h3, h4.ant-typography, .ant-typography h4 {
+    font-size: 1.15rem !important;
+  }
+
+  .ant-card .ant-card-body {
+    padding: 12px 10px !important;
+  }
+
+  .ant-card .ant-card-head {
+    padding: 12px 14px !important;
+  }
+
+  .stat-card {
+    padding: 14px 12px !important;
+    border-radius: 12px !important;
+  }
+
+  .stat-card .ant-statistic-content {
+    font-size: 1.4rem !important;
+  }
+
+  .ant-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .ant-table-thead > tr > th {
+    padding: 10px 10px !important;
+    font-size: 12px !important;
+  }
+
+  .ant-table-tbody > tr > td {
+    padding: 10px 10px !important;
+    font-size: 12px !important;
+  }
+
+  .ant-modal {
+    max-width: calc(100vw - 20px) !important;
+    margin: 10px auto !important;
+    top: 20px !important;
+  }
+
+  .ant-modal-content {
+    padding: 16px 14px !important;
+    border-radius: 16px !important;
+  }
+
+  .ant-drawer-content-wrapper {
+    max-width: 100vw !important;
+  }
+
+  .ant-btn {
+    min-height: 36px;
+    font-size: 13px;
+  }
+
+  .ant-picker,
+  .ant-select {
+    width: 100% !important;
+  }
+}
+

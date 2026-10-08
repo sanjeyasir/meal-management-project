@@ -110,7 +110,7 @@ export async function loginWithBiometric(rawPayload) {
     section: employee.section || "Operations",
     category_employment: employee.category_employment || "Worker",
     category_name: employee.category_employment || "Worker",
-    pay_category: categoryConfig?.configuration_detail || "Free Meal",
+    pay_category: categoryConfig?.configuration_detail || "Full Paid",
     isAdmin: String(employee.designation || "").toLowerCase().includes("admin") || String(employee.employee_id) === "1",
     loginMethod: "FINGERPRINT",
     loginTime: new Date().toISOString()
@@ -130,27 +130,25 @@ export async function loginManual(username, password) {
   const p = (password || "").trim();
 
   // Admin shortcut support (like Python app)
-  if ((u === "admin" && (p === "admin" || p === "admin123")) || (u === "1" && p === "admin")) {
-    const employee = await getEmployeeById("1") || {
-      employee_id: "1",
+  if ((u.toLowerCase() === "admin" && (p === "admin" || p === "admin123")) || (u === "1" && p === "admin")) {
+    const employee = await getEmployeeById("admin") || await getEmployeeById("1") || {
+      employee_id: "admin",
       name: "Admin",
       designation: "Admin",
       company: "Hayleys Eco Solutions",
-      section: "Administration",
       category_employment: "Executive"
     };
 
-    const categoryConfig = await getCategoryByName(employee.category_employment);
+    const categoryConfig = await getCategoryByName(employee.category_employment || "Executive");
 
     const sessionData = {
-      employee_id: "1",
-      name: employee.name || "System Admin",
+      employee_id: "admin",
+      name: employee.name || "Admin",
       designation: "Admin",
       company: employee.company || "Hayleys Eco Solutions",
-      section: employee.section || "Administration",
       category_employment: employee.category_employment || "Executive",
       category_name: employee.category_employment || "Executive",
-      pay_category: categoryConfig?.configuration_detail || "Free Meal",
+      pay_category: categoryConfig?.configuration_detail || "Full Paid",
       isAdmin: true,
       loginMethod: "CREDENTIALS",
       loginTime: new Date().toISOString()
@@ -169,11 +167,10 @@ export async function loginManual(username, password) {
       name: employee.name,
       designation: employee.designation,
       company: employee.company || "Hayleys Eco Solutions",
-      section: employee.section || "Operations",
       category_employment: employee.category_employment,
       category_name: employee.category_employment,
-      pay_category: categoryConfig?.configuration_detail || "Free Meal",
-      isAdmin: String(employee.designation || "").toLowerCase().includes("admin") || employee.employee_id === "1",
+      pay_category: categoryConfig?.configuration_detail || "Full Paid",
+      isAdmin: String(employee.designation || "").toLowerCase().includes("admin") || employee.employee_id?.toLowerCase() === "admin" || employee.employee_id === "1",
       loginMethod: "CREDENTIALS",
       loginTime: new Date().toISOString()
     };
@@ -198,11 +195,10 @@ export async function selectEmployeeSession(employee) {
     name: employee.name,
     designation: employee.designation || "Staff",
     company: employee.company || "Hayleys Eco Solutions",
-    section: employee.section || "Operations",
     category_employment: employee.category_employment || "Worker",
     category_name: employee.category_employment || "Worker",
-    pay_category: categoryConfig?.configuration_detail || "Free Meal",
-    isAdmin: String(employee.designation || "").toLowerCase().includes("admin") || String(employee.employee_id) === "1",
+    pay_category: categoryConfig?.configuration_detail || "Full Paid",
+    isAdmin: String(employee.designation || "").toLowerCase().includes("admin") || String(employee.employee_id).toLowerCase() === "admin" || String(employee.employee_id) === "1",
     loginMethod: "KIOSK_SELECTION",
     loginTime: new Date().toISOString()
   };
@@ -217,7 +213,13 @@ export async function selectEmployeeSession(employee) {
 export function getCurrentUser() {
   try {
     const raw = localStorage.getItem(SESSION_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    const session = JSON.parse(raw);
+    if (session && (session.employee_id === "1" || session.name === "Admin" || session.isAdmin) && session.employee_id === "1") {
+      session.employee_id = "admin";
+      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    }
+    return session;
   } catch {
     return null;
   }

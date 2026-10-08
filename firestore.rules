@@ -16,7 +16,12 @@ service cloud.firestore {
       allow read, write: if true;
     }
     
-    // Plant departments & sections
+    // Master companies & business units
+    match /companies/{companyId} {
+      allow read, write: if true;
+    }
+    
+    // Plant departments & sections (legacy compatibility)
     match /departments/{departmentId} {
       allow read, write: if true;
     }

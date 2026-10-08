@@ -87,7 +87,7 @@ export default function MealOrderPage() {
       company: currentUser.company || "Hayleys Eco Solutions",
       section: currentUser.section || "Operations",
       category_name: currentUser.category_name || "Worker",
-      pay_category: currentUser.pay_category || "Free Meal",
+      pay_category: currentUser.pay_category || "Full Paid",
       start_date: formatDateKey(start),
       end_date: formatDateKey(end),
       total_days: totalDays,
@@ -116,7 +116,7 @@ export default function MealOrderPage() {
       company: currentUser.company,
       section: currentUser.section,
       category_name: currentUser.category_name,
-      pay_category: currentUser.pay_category,
+      pay_category: currentUser.pay_category || "Full Paid",
       start_date: formatDateKey(startDate),
       end_date: formatDateKey(endDate),
       total_days: Math.ceil(Math.abs(new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24)) + 1,
@@ -370,7 +370,7 @@ export default function MealOrderPage() {
                     {currentUser?.employee_id} • {currentUser?.designation}
                   </div>
                   <Tag color="emerald" style={{ marginTop: 4, fontWeight: 700 }}>
-                    {currentUser?.pay_category || "Free Meal"}
+                    {currentUser?.pay_category || "Full Paid"}
                   </Tag>
                 </div>
               </div>

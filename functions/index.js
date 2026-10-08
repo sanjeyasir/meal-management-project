@@ -1,11 +1,12 @@
 const { onRequest } = require("firebase-functions/v2/https");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 const express = require("express");
 const cors = require("cors");
 
 const iclockRouter = require("./routes/iclock.js");
 const mealsRouter = require("./routes/meals.js");
 const employeesRouter = require("./routes/employees.js");
-const reportsRouter = require("./routes/reports.js");
+const reportsModule = require("./routes/reports.js");
 const kiosksRouter = require("./routes/kiosks.js");
 
 const app = express();
@@ -32,7 +33,7 @@ app.get("/", (req, res) => {
       iclock: ["/iclock/cdata", "/iclock/getrequest", "/api/iclock/punch"],
       meals: ["/api/meals/order", "/api/meals/dispense", "/api/meals/today", "/api/meals/employee/:empId"],
       employees: ["/api/employees", "/api/employees/:id", "/api/employees/verify"],
-      reports: ["/api/reports/summary", "/api/reports/unclaimed"],
+      reports: ["/api/reports/summary", "/api/reports/unclaimed", "/api/reports/archive-daily"],
       kiosks: ["/api/kiosks/status", "/api/kiosks/heartbeat"]
     }
   });
@@ -53,6 +54,7 @@ app.use("/meals", mealsRouter);
 app.use("/api/employees", employeesRouter);
 app.use("/employees", employeesRouter);
 
+const reportsRouter = reportsModule.router || reportsModule;
 app.use("/api/reports", reportsRouter);
 app.use("/reports", reportsRouter);
 
@@ -100,4 +102,26 @@ exports.iclock = onRequest(
     invoker: "public"
   },
   app
+);
+
+/**
+ * Automated Daily Midnight Archive Function (12:00 AM Sri Lanka Time)
+ * Compiles the previous day's allocations only, generates formatted Excel (.xlsx),
+ * uploads to Firebase Storage under daily_archive_reports/, and records metadata in Firestore.
+ */
+exports.archiveDailyAllocations = onSchedule(
+  {
+    schedule: "0 0 * * *", // Every day at 12:00 AM (midnight)
+    timeZone: "Asia/Colombo",
+    region: "us-central1"
+  },
+  async (event) => {
+    console.log("[Cloud Scheduler] Running daily 12:00 AM allocations archive...");
+    try {
+      const result = await reportsModule.archiveDailyAllocations(null, "Cloud Scheduler (12:00 AM)");
+      console.log(`[Cloud Scheduler] Daily archive successfully completed for date: ${result.date}`, result);
+    } catch (err) {
+      console.error("[Cloud Scheduler Error] Failed running daily allocations archive:", err);
+    }
+  }
 );

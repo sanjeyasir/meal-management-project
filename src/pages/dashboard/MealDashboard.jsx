@@ -74,57 +74,60 @@ export default function MealDashboard() {
     { title: "Total Received", count: stats.recieved.total, b: stats.recieved.breakfast, l: stats.recieved.lunch, d: stats.recieved.dinner, color: "#10b981", bg: "#ecfdf5" },
     { title: "Total Half-Paid", count: stats.half_paid.total, b: stats.half_paid.breakfast, l: stats.half_paid.lunch, d: stats.half_paid.dinner, color: "#f59e0b", bg: "#fffbeb" },
     { title: "Total Not Paid", count: stats.not_paid.total, b: stats.not_paid.breakfast, l: stats.not_paid.lunch, d: stats.not_paid.dinner, color: "#ef4444", bg: "#fef2f2" },
-    { title: "Total Free Meals", count: stats.free.total, b: stats.free.breakfast, l: stats.free.lunch, d: stats.free.dinner, color: "#8b5cf6", bg: "#f5f3ff" }
+    { title: "Total Full Paid", count: stats.free.total, b: stats.free.breakfast, l: stats.free.lunch, d: stats.free.dinner, color: "#059669", bg: "#f0fdf4" }
   ];
 
   return (
     <div style={{ maxWidth: 1300, margin: "0 auto", width: "100%" }}>
       {/* Welcome Banner */}
-      <div style={{
-        background: "linear-gradient(135deg, #064e3b 0%, #047857 50%, #059669 100%)",
-        borderRadius: 20,
-        padding: "24px 32px",
-        color: "#ffffff",
-        marginBottom: 24,
-        boxShadow: "0 10px 25px -5px rgba(6, 78, 59, 0.25)",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        flexWrap: "wrap",
-        gap: 16
-      }}>
-        <div>
-          <div style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: "0.08em", color: "#a7f3d0", fontWeight: 700, marginBottom: 4 }}>
-            Meal Management Project Canteen Operations
+      <Card
+        bordered={false}
+        style={{
+          borderRadius: 20,
+          marginBottom: 24,
+          background: "#ffffff",
+          boxShadow: "0 4px 14px rgba(0,0,0,0.04)",
+          border: "1px solid #e2e8f0"
+        }}
+        bodyStyle={{ padding: "24px 32px" }}
+      >
+        <div style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: 16
+        }}>
+          <div>
+            <div style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: "0.08em", color: "#059669", fontWeight: 700, marginBottom: 4 }}>
+              Meal Management Operations
+            </div>
+            <Title level={2} style={{ color: "#0f172a", margin: 0, fontWeight: 800 }}>
+              Welcome, {currentUser?.name || "Employee"}!
+            </Title>
+            <Text style={{ color: "#475569", fontSize: 14 }}>
+              Emp ID: <b>{currentUser?.employee_id}</b> • {currentUser?.section || "Operations"} • Category: <b>{currentUser?.category_name || "Worker"} ({currentUser?.pay_category || "Full Paid"})</b>
+            </Text>
           </div>
-          <Title level={2} style={{ color: "#ffffff", margin: 0, fontWeight: 800 }}>
-            Welcome, {currentUser?.name || "Employee"}!
-          </Title>
-          <Text style={{ color: "#d1fae5", fontSize: 14 }}>
-            Emp ID: <b>{currentUser?.employee_id}</b> • {currentUser?.section || "Operations"} • Category: <b>{currentUser?.category_name || "Worker"} ({currentUser?.pay_category || "Free Meal"})</b>
-          </Text>
-        </div>
 
-        <Space size="middle">
-          <Tag color="success" style={{ padding: "6px 14px", borderRadius: 8, fontSize: 14, fontWeight: 700 }}>
-            {currentUser?.pay_category || "Free Meal"}
-          </Tag>
-          <Button
-            type="primary"
-            icon={<CalendarOutlined />}
-            onClick={() => navigate("/meals/my-allocations")}
-            style={{
-              background: "rgba(255, 255, 255, 0.2)",
-              borderColor: "rgba(255, 255, 255, 0.3)",
-              backdropFilter: "blur(8px)",
-              fontWeight: 600,
-              height: 42
-            }}
-          >
-            My 5-Day Plan
-          </Button>
-        </Space>
-      </div>
+          <Space size="middle">
+            <Tag color="success" style={{ padding: "6px 14px", borderRadius: 8, fontSize: 14, fontWeight: 700 }}>
+              {currentUser?.pay_category || "Full Paid"}
+            </Tag>
+            <Button
+              type="primary"
+              icon={<CalendarOutlined />}
+              onClick={() => navigate("/meals/my-allocations")}
+              style={{
+                fontWeight: 600,
+                height: 42
+              }}
+            >
+              My 5-Day Plan
+            </Button>
+          </Space>
+        </div>
+      </Card>
 
       <Row gutter={[24, 24]}>
         {/* Left Column: Two Giant Primary Action Cards */}

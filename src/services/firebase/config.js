@@ -1,6 +1,7 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
+import { getStorage } from "firebase/storage";
 import { getAnalytics, isSupported } from "firebase/analytics";
 
 // Firebase credentials for Meal Management Project (Cloud Functions & Web App Unified)
@@ -22,6 +23,9 @@ export const db = getFirestore(app);
 
 // Auth instance
 export const auth = getAuth(app);
+
+// Storage instance
+export const storage = getStorage(app);
 
 // Analytics instance (if supported in browser/desktop environment)
 export let analytics = null;

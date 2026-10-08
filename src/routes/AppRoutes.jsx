@@ -7,6 +7,7 @@ import AppLayout from "../components/layout/AppLayout";
 import Login from "../pages/auth/Login";
 import AnalyticsDashboard from "../pages/admin/AnalyticsDashboard";
 import ReportsPage from "../pages/admin/ReportsPage";
+import DailyArchivedReportsPage from "../pages/admin/DailyArchivedReportsPage";
 import AllAllocationsPage from "../pages/admin/AllAllocationsPage";
 import AllocationsEditPage from "../pages/admin/AllocationsEditPage";
 import EmployeesPage from "../pages/admin/EmployeesPage";
@@ -69,6 +70,28 @@ export default function AppRoutes() {
           <ProtectedRoute adminOnly>
             <AppLayout>
               <ReportsPage />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/daily-archive"
+        element={
+          <ProtectedRoute adminOnly>
+            <AppLayout>
+              <DailyArchivedReportsPage />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/archived-reports"
+        element={
+          <ProtectedRoute adminOnly>
+            <AppLayout>
+              <DailyArchivedReportsPage />
             </AppLayout>
           </ProtectedRoute>
         }

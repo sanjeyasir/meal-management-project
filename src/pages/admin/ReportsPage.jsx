@@ -25,11 +25,16 @@ import {
   ClockCircleOutlined,
   CoffeeOutlined,
   FilterOutlined,
-  CalendarOutlined
+  CalendarOutlined,
+  CloudUploadOutlined,
+  ArrowRightOutlined,
+  BankOutlined
 } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import { getMealAllocations, formatDateKey } from "../../services/firebase/mealService";
-import { getDepartments } from "../../services/firebase/departmentService";
+import { getCompanies } from "../../services/firebase/companyService";
+import { getCategories, normalizePaymentType } from "../../services/firebase/categoryService";
 import { generateFormattedMealReport } from "../../utils/excelReportGenerator";
 import { formatSriLankaDateTime } from "../../utils/timeUtils";
 
@@ -38,28 +43,33 @@ const { Option } = Select;
 const { RangePicker } = DatePicker;
 
 export default function ReportsPage() {
+  const navigate = useNavigate();
   const [allocations, setAllocations] = useState([]);
-  const [departments, setDepartments] = useState([]);
+  const [companies, setCompanies] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
 
   // Filters State
   const [presetTime, setPresetTime] = useState("TODAY"); // "TODAY" | "WEEK" | "MONTH" | "ALL" | "CUSTOM"
   const [customDateRange, setCustomDateRange] = useState(null);
-  const [selectedDept, setSelectedDept] = useState("ALL");
+  const [selectedCompany, setSelectedCompany] = useState("ALL");
   const [selectedMealType, setSelectedMealType] = useState("ALL");
   const [selectedStatus, setSelectedStatus] = useState("ALL");
+  const [selectedPayCategory, setSelectedPayCategory] = useState("ALL");
   const [searchText, setSearchText] = useState("");
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [allAlloc, allDepts] = await Promise.all([
+      const [allAlloc, allComps, allCats] = await Promise.all([
         getMealAllocations(),
-        getDepartments()
+        getCompanies(),
+        getCategories()
       ]);
       setAllocations(allAlloc);
-      setDepartments(allDepts);
+      setCompanies(allComps);
+      setCategories(allCats);
     } catch (err) {
       console.error("Error loading allocations for reports:", err);
       message.error("Failed to load allocation reports.");
@@ -71,6 +81,24 @@ export default function ReportsPage() {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Category to Subsidy Lookup Map (auto-resolves payment plan from Master Categories)
+  const categoryMap = useMemo(() => {
+    const map = {};
+    (categories || []).forEach((c) => {
+      if (c.category_name) {
+        map[c.category_name.toLowerCase()] = c.configuration_detail;
+      }
+    });
+    return map;
+  }, [categories]);
+
+  // Helper to get auto-resolved payment plan
+  const getAutoSubsidy = (item) => {
+    const catName = (item.category_name || item.category_employment || item.employee_category || "Staff").trim();
+    const masterSubsidy = categoryMap[catName.toLowerCase()] || item.pay_category || item.configuration_detail;
+    return normalizePaymentType(masterSubsidy);
+  };
 
   // Filter allocations
   const filteredAllocations = useMemo(() => {
@@ -95,9 +123,9 @@ export default function ReportsPage() {
         if (item.date < startStr || item.date > endStr) return false;
       }
 
-      // 2. Department filter
-      if (selectedDept !== "ALL") {
-        if ((item.section || "").toLowerCase() !== selectedDept.toLowerCase()) return false;
+      // 2. Company filter
+      if (selectedCompany !== "ALL") {
+        if ((item.company || "").toLowerCase() !== selectedCompany.toLowerCase()) return false;
       }
 
       // 3. Meal Type filter
@@ -112,18 +140,25 @@ export default function ReportsPage() {
         if (selectedStatus === "ORDERED" && isRecv) return false;
       }
 
-      // 5. Text Search
+      // 5. Subsidy / Payment Plan filter (Auto-resolved from Master Category)
+      const normPay = getAutoSubsidy(item);
+      if (selectedPayCategory !== "ALL") {
+        if (normPay.toLowerCase() !== selectedPayCategory.toLowerCase()) return false;
+      }
+
+      // 6. Text Search
       if (searchText.trim()) {
         const s = searchText.toLowerCase();
         const name = (item.employee_name || "").toLowerCase();
         const id = (item.employee_id || "").toLowerCase();
-        const sec = (item.section || "").toLowerCase();
-        if (!name.includes(s) && !id.includes(s) && !sec.includes(s)) return false;
+        const comp = (item.company || "").toLowerCase();
+        const cat = (item.category_name || item.category_employment || "").toLowerCase();
+        if (!name.includes(s) && !id.includes(s) && !comp.includes(s) && !cat.includes(s)) return false;
       }
 
       return true;
     });
-  }, [allocations, presetTime, customDateRange, selectedDept, selectedMealType, selectedStatus, searchText]);
+  }, [allocations, presetTime, customDateRange, selectedCompany, selectedMealType, selectedStatus, selectedPayCategory, searchText, categoryMap]);
 
   // Aggregate Metrics for filtered data
   const totalCount = filteredAllocations.length;
@@ -133,9 +168,9 @@ export default function ReportsPage() {
   const pendingCount = totalCount - receivedCount;
   const dispenseRate = totalCount > 0 ? Math.round((receivedCount / totalCount) * 100) : 0;
 
-  const freeCount = filteredAllocations.filter((a) => (a.pay_category || "").toLowerCase().includes("free")).length;
-  const halfPaidCount = filteredAllocations.filter((a) => (a.pay_category || "").toLowerCase().includes("half")).length;
-  const notPaidCount = filteredAllocations.filter((a) => (a.pay_category || "").toLowerCase().includes("not")).length;
+  const fullPaidCount = filteredAllocations.filter((a) => getAutoSubsidy(a) === "Full Paid").length;
+  const halfPaidCount = filteredAllocations.filter((a) => getAutoSubsidy(a) === "Half Paid").length;
+  const notPaidCount = filteredAllocations.filter((a) => getAutoSubsidy(a) === "Not Paid").length;
 
   // Handle Excel Export
   const handleExportExcel = async () => {
@@ -153,12 +188,13 @@ export default function ReportsPage() {
 
       await generateFormattedMealReport({
         allocations: filteredAllocations,
-        title: "MEAL MANAGEMENT PROJECT - MEAL ALLOCATIONS & CONSUMPTION REPORT",
+        title: "HAYLEYS ECO SOLUTIONS - MEAL ALLOCATIONS REPORT",
         dateRangeStr: rangeLabel,
-        generatedBy: "System Administrator"
+        generatedBy: "System Administrator",
+        categoryMap
       });
 
-      message.success("Formatted multi-sheet Excel report generated successfully!");
+      message.success("Formatted Excel report generated and downloaded successfully!");
     } catch (err) {
       console.error("Export error:", err);
       message.error(`Failed to export Excel report: ${err.message}`);
@@ -167,33 +203,62 @@ export default function ReportsPage() {
     }
   };
 
-  // Columns for Live Preview Table
+  // Columns for Live Preview Table (NO Allocation ID, NO Section/Dept)
   const columns = [
     {
       title: "Date",
       dataIndex: "date",
       key: "date",
-      width: 110,
-      render: (text) => <b>{text}</b>
+      width: 115,
+      fixed: "left",
+      render: (text) => <b style={{ color: "#0f172a" }}>{text}</b>
     },
     {
-      title: "Emp ID",
+      title: "Employee ID",
       dataIndex: "employee_id",
       key: "employee_id",
-      width: 100,
-      render: (text) => <Tag color="blue">{text}</Tag>
+      width: 130,
+      fixed: "left",
+      render: (text) => (
+        <Tag color="blue" style={{ fontWeight: 700, padding: "2px 8px" }}>
+          {text}
+        </Tag>
+      )
     },
     {
-      title: "Employee Name",
+      title: "Full Name",
       dataIndex: "employee_name",
       key: "employee_name",
-      render: (text) => <span style={{ fontWeight: 600 }}>{text || "Staff"}</span>
+      width: 200,
+      render: (text) => <span style={{ fontWeight: 700, color: "#0f172a" }}>{text || "Staff"}</span>
     },
     {
-      title: "Department / Section",
-      dataIndex: "section",
-      key: "section",
-      render: (text) => text || "Operations"
+      title: "Company",
+      dataIndex: "company",
+      key: "company",
+      width: 220,
+      render: (text) => <Tag color="geekblue" style={{ fontWeight: 600 }}>{text || "Hayleys Eco Solutions"}</Tag>
+    },
+    {
+      title: "Meal Category",
+      dataIndex: "category_name",
+      key: "category_name",
+      width: 130,
+      render: (cat, r) => <Tag color="cyan" style={{ fontWeight: 600 }}>{cat || r.category_employment || "Staff"}</Tag>
+    },
+    {
+      title: "Payment Plan",
+      key: "pay_category",
+      width: 140,
+      render: (_, r) => {
+        const norm = getAutoSubsidy(r);
+        const color = norm === "Full Paid" ? "green" : norm === "Half Paid" ? "orange" : "red";
+        return (
+          <Tag color={color} style={{ fontWeight: 700 }}>
+            {norm}
+          </Tag>
+        );
+      }
     },
     {
       title: "Meal Slot",
@@ -208,20 +273,10 @@ export default function ReportsPage() {
       }
     },
     {
-      title: "Subsidy Category",
-      dataIndex: "pay_category",
-      key: "pay_category",
-      render: (text) => (
-        <Tag color="cyan" style={{ fontWeight: 600 }}>
-          {text || "Free Meal"}
-        </Tag>
-      )
-    },
-    {
       title: "Status",
       dataIndex: "status",
       key: "status",
-      width: 130,
+      width: 120,
       render: (status) => {
         const isRecv = (status || "").toLowerCase() === "recieved" || (status || "").toLowerCase() === "received";
         return isRecv ? (
@@ -236,35 +291,36 @@ export default function ReportsPage() {
       }
     },
     {
-      title: "Created (SL Time)",
+      title: "Created At (SL Time)",
       dataIndex: "created_at",
       key: "created_at",
-      width: 180,
-      render: (dt) => formatSriLankaDateTime(dt)
-    },
-    {
-      title: "Dispensed (SL Time)",
-      dataIndex: "received_at",
-      key: "received_at",
-      width: 180,
-      render: (dt) => formatSriLankaDateTime(dt)
+      render: (dt) => <span style={{ color: "#475569", fontSize: "0.85rem" }}>{formatSriLankaDateTime(dt)}</span>
     }
   ];
 
   return (
-    <div style={{ maxWidth: 1300, margin: "0 auto", width: "100%" }}>
-      {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 16 }}>
+    <div style={{ maxWidth: 1600, margin: "0 auto", width: "100%" }}>
+      {/* Top Banner & Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 14 }}>
         <div>
           <Title level={2} style={{ margin: 0, fontWeight: 800, color: "#0f172a" }}>
-            Formatted Excel Reports
+            Operational Reports & Export
           </Title>
-          <Text type="secondary" style={{ fontSize: 14 }}>
-            Generate styled, multi-sheet Excel reports with executive KPIs, department summaries, and transaction logs.
+          <Text type="secondary" style={{ fontSize: 14, color: "#475569" }}>
+            Real-time meal consumption reports, dynamic payment plan breakdowns, and transaction Excel exports
           </Text>
         </div>
 
         <Space size="middle" wrap>
+          <Button
+            type="default"
+            icon={<CloudUploadOutlined style={{ color: "#059669" }} />}
+            onClick={() => navigate("/admin/daily-archive")}
+            style={{ fontWeight: 700, borderColor: "#059669", color: "#059669", borderRadius: 8 }}
+          >
+            Daily Firebase Storage Archives
+          </Button>
+
           <Button
             type="primary"
             icon={<FileExcelOutlined />}
@@ -272,151 +328,162 @@ export default function ReportsPage() {
             loading={exporting}
             onClick={handleExportExcel}
             style={{
-              fontWeight: 800,
-              background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-              boxShadow: "0 6px 18px -3px rgba(16, 185, 129, 0.4)",
-              height: 44,
-              borderRadius: 10
+              background: "#059669",
+              borderColor: "#059669",
+              fontWeight: 700,
+              borderRadius: 8,
+              boxShadow: "0 4px 12px rgba(5, 150, 105, 0.25)"
             }}
           >
-            Download Formatted Excel (.xlsx)
+            Export Formatted Excel Report
           </Button>
 
-          <Button icon={<ReloadOutlined />} onClick={loadData} loading={loading} size="large" style={{ height: 44 }} />
+          <Button icon={<ReloadOutlined />} onClick={loadData} loading={loading} style={{ borderRadius: 8 }}>
+            Refresh
+          </Button>
         </Space>
       </div>
 
-      {/* KPI Cards for Filtered Range */}
-      <Row gutter={[18, 18]} style={{ marginBottom: 24 }}>
-        <Col xs={24} sm={12} md={6}>
-          <Card className="glass-card" style={{ borderLeft: "4px solid #3b82f6" }}>
+      {/* KPI Stats Row */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
+        <Col xs={12} sm={12} md={6}>
+          <Card className="glass-card" style={{ borderRadius: 14 }}>
             <Statistic
-              title={<span style={{ fontWeight: 600, color: "#64748b" }}>Total Filtered Meals</span>}
+              title={<span style={{ fontWeight: 700, color: "#0f172a" }}>Total Allocations</span>}
               value={totalCount}
-              valueStyle={{ fontWeight: 800, color: "#1e3a8a" }}
+              prefix={<CoffeeOutlined style={{ color: "#0284c7" }} />}
+              valueStyle={{ color: "#0f172a", fontWeight: 800 }}
             />
           </Card>
         </Col>
-
-        <Col xs={24} sm={12} md={6}>
-          <Card className="glass-card" style={{ borderLeft: "4px solid #10b981" }}>
+        <Col xs={12} sm={12} md={6}>
+          <Card className="glass-card" style={{ borderRadius: 14 }}>
             <Statistic
-              title={<span style={{ fontWeight: 600, color: "#64748b" }}>Dispensed Portions</span>}
-              value={receivedCount}
-              valueStyle={{ fontWeight: 800, color: "#065f46" }}
-              suffix={<span style={{ fontSize: 13, color: "#10b981" }}>({dispenseRate}%)</span>}
+              title={<span style={{ fontWeight: 700, color: "#0f172a" }}>Full Paid (100%)</span>}
+              value={fullPaidCount}
+              valueStyle={{ color: "#059669", fontWeight: 800 }}
+              suffix={<span style={{ fontSize: 13, color: "#64748b" }}>meals</span>}
             />
           </Card>
         </Col>
-
-        <Col xs={24} sm={12} md={6}>
-          <Card className="glass-card" style={{ borderLeft: "4px solid #f59e0b" }}>
+        <Col xs={12} sm={12} md={6}>
+          <Card className="glass-card" style={{ borderRadius: 14 }}>
             <Statistic
-              title={<span style={{ fontWeight: 600, color: "#64748b" }}>Pending Dispensing</span>}
-              value={pendingCount}
-              valueStyle={{ fontWeight: 800, color: "#92400e" }}
+              title={<span style={{ fontWeight: 700, color: "#0f172a" }}>Half Paid (50%)</span>}
+              value={halfPaidCount}
+              valueStyle={{ color: "#d97706", fontWeight: 800 }}
+              suffix={<span style={{ fontSize: 13, color: "#64748b" }}>meals</span>}
             />
           </Card>
         </Col>
-
-        <Col xs={24} sm={12} md={6}>
-          <Card className="glass-card" style={{ borderLeft: "4px solid #8b5cf6" }}>
+        <Col xs={12} sm={12} md={6}>
+          <Card className="glass-card" style={{ borderRadius: 14 }}>
             <Statistic
-              title={<span style={{ fontWeight: 600, color: "#64748b" }}>Free Subsidies</span>}
-              value={freeCount}
-              valueStyle={{ fontWeight: 800, color: "#4c1d95" }}
-              suffix={<span style={{ fontSize: 12, color: "#64748b" }}>/ {halfPaidCount} half</span>}
+              title={<span style={{ fontWeight: 700, color: "#0f172a" }}>Not Paid</span>}
+              value={notPaidCount}
+              valueStyle={{ color: "#dc2626", fontWeight: 800 }}
+              suffix={<span style={{ fontSize: 13, color: "#64748b" }}>meals</span>}
             />
           </Card>
         </Col>
       </Row>
 
-      {/* Filter Controls Card */}
-      <Card className="glass-card" style={{ borderRadius: 16, marginBottom: 24, padding: "8px 4px" }}>
-        <Row gutter={[16, 16]} align="middle">
-          {/* Timeframe Preset */}
-          <Col xs={24} sm={12} md={6}>
-            <Text strong style={{ display: "block", marginBottom: 6, fontSize: 13 }}>Timeframe Preset:</Text>
+      {/* Filter Control Bar */}
+      <Card className="glass-card" style={{ marginBottom: 20, borderRadius: 14 }}>
+        <Row gutter={[12, 12]} align="middle">
+          {/* Preset Time Range */}
+          <Col xs={24} md={6}>
+            <Text strong style={{ display: "block", marginBottom: 4, color: "#0f172a" }}>Time Preset</Text>
             <Select
               value={presetTime}
-              onChange={(val) => {
-                setPresetTime(val);
-                if (val !== "CUSTOM") setCustomDateRange(null);
-              }}
+              onChange={(val) => setPresetTime(val)}
               style={{ width: "100%" }}
             >
-              <Option value="TODAY">📅 Today's Meals</Option>
-              <Option value="WEEK">🗓 Next 7 Days</Option>
-              <Option value="MONTH">📆 Current Month</Option>
-              <Option value="ALL">🌐 All Time Records</Option>
-              <Option value="CUSTOM">🕒 Custom Date Range...</Option>
+              <Option value="TODAY">Today Only</Option>
+              <Option value="WEEK">Next 7 Days</Option>
+              <Option value="MONTH">This Month</Option>
+              <Option value="ALL">All Recorded Dates</Option>
+              <Option value="CUSTOM">Custom Date Range...</Option>
             </Select>
           </Col>
 
-          {/* Custom Date Range */}
+          {/* Custom Date Range Picker */}
           {presetTime === "CUSTOM" && (
-            <Col xs={24} sm={12} md={6}>
-              <Text strong style={{ display: "block", marginBottom: 6, fontSize: 13 }}>Select Custom Range:</Text>
+            <Col xs={24} md={6}>
+              <Text strong style={{ display: "block", marginBottom: 4, color: "#0f172a" }}>Date Range</Text>
               <RangePicker
-                style={{ width: "100%" }}
                 value={customDateRange}
-                onChange={setCustomDateRange}
+                onChange={(dates) => setCustomDateRange(dates)}
+                style={{ width: "100%" }}
               />
             </Col>
           )}
 
-          {/* Department Filter */}
-          <Col xs={24} sm={12} md={5}>
-            <Text strong style={{ display: "block", marginBottom: 6, fontSize: 13 }}>Department / Section:</Text>
+          {/* Company Filter */}
+          <Col xs={12} sm={6} md={presetTime === "CUSTOM" ? 4 : 5}>
+            <Text strong style={{ display: "block", marginBottom: 4, color: "#0f172a" }}>Company / Plant</Text>
             <Select
-              value={selectedDept}
-              onChange={setSelectedDept}
+              value={selectedCompany}
+              onChange={(val) => setSelectedCompany(val)}
               style={{ width: "100%" }}
             >
-              <Option value="ALL">All Departments</Option>
-              {departments.map((d) => (
-                <Option key={d.name} value={d.name}>
-                  {d.name}
-                </Option>
+              <Option value="ALL">All Companies</Option>
+              {companies.map((c) => (
+                <Option key={c.name} value={c.name}>{c.name}</Option>
               ))}
             </Select>
           </Col>
 
-          {/* Meal Type Filter */}
-          <Col xs={24} sm={12} md={4}>
-            <Text strong style={{ display: "block", marginBottom: 6, fontSize: 13 }}>Meal Slot:</Text>
+          {/* Meal Slot Filter */}
+          <Col xs={12} sm={6} md={3}>
+            <Text strong style={{ display: "block", marginBottom: 4, color: "#0f172a" }}>Meal Slot</Text>
             <Select
               value={selectedMealType}
-              onChange={setSelectedMealType}
+              onChange={(val) => setSelectedMealType(val)}
               style={{ width: "100%" }}
             >
               <Option value="ALL">All Slots</Option>
-              <Option value="Breakfast">☕ Breakfast</Option>
-              <Option value="Lunch">🍲 Lunch</Option>
-              <Option value="Dinner">🍽 Dinner</Option>
+              <Option value="Breakfast">Breakfast</Option>
+              <Option value="Lunch">Lunch</Option>
+              <Option value="Dinner">Dinner</Option>
+            </Select>
+          </Col>
+
+          {/* Subsidy Plan Filter */}
+          <Col xs={12} sm={6} md={4}>
+            <Text strong style={{ display: "block", marginBottom: 4, color: "#0f172a" }}>Subsidy Plan</Text>
+            <Select
+              value={selectedPayCategory}
+              onChange={(val) => setSelectedPayCategory(val)}
+              style={{ width: "100%" }}
+            >
+              <Option value="ALL">All Plans</Option>
+              <Option value="Full Paid">Full Paid (100%)</Option>
+              <Option value="Half Paid">Half Paid (50%)</Option>
+              <Option value="Not Paid">Not Paid (Unpaid)</Option>
             </Select>
           </Col>
 
           {/* Status Filter */}
-          <Col xs={24} sm={12} md={4}>
-            <Text strong style={{ display: "block", marginBottom: 6, fontSize: 13 }}>Status:</Text>
+          <Col xs={12} sm={6} md={3}>
+            <Text strong style={{ display: "block", marginBottom: 4, color: "#0f172a" }}>Status</Text>
             <Select
               value={selectedStatus}
-              onChange={setSelectedStatus}
+              onChange={(val) => setSelectedStatus(val)}
               style={{ width: "100%" }}
             >
-              <Option value="ALL">All Statuses</Option>
-              <Option value="RECEIVED">✅ Dispensed</Option>
-              <Option value="ORDERED">⏳ Pending</Option>
+              <Option value="ALL">All Status</Option>
+              <Option value="ORDERED">Ordered</Option>
+              <Option value="RECEIVED">Received</Option>
             </Select>
           </Col>
 
-          {/* Search Box */}
-          <Col xs={24} md={5}>
-            <Text strong style={{ display: "block", marginBottom: 6, fontSize: 13 }}>Search Employee:</Text>
+          {/* Search Input */}
+          <Col xs={24} md={presetTime === "CUSTOM" ? 24 : 3}>
+            <Text strong style={{ display: "block", marginBottom: 4, color: "#0f172a" }}>Search</Text>
             <Input
               prefix={<SearchOutlined style={{ color: "#94a3b8" }} />}
-              placeholder="Search Name or ID..."
+              placeholder="Emp ID, Name..."
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               allowClear
@@ -425,24 +492,30 @@ export default function ReportsPage() {
         </Row>
       </Card>
 
-      {/* Live Preview Table */}
-      <Card
-        title={
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontWeight: 800, fontSize: 16 }}>Live Report Preview ({filteredAllocations.length} records)</span>
-            <Tag color="cyan">Ready to Export</Tag>
-          </div>
-        }
-        className="glass-card"
-        style={{ borderRadius: 16 }}
-      >
+      {/* Allocations Table Preview */}
+      <Card className="glass-card" style={{ borderRadius: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <Text strong style={{ fontSize: 16, color: "#0f172a" }}>
+            Transaction Preview ({filteredAllocations.length} matching rows)
+          </Text>
+          <Text type="secondary" style={{ color: "#475569" }}>
+            Payment plan automatically synchronized with Master Categories
+          </Text>
+        </div>
+
         <Table
+          bordered
+          size="middle"
           columns={columns}
           dataSource={filteredAllocations}
-          rowKey={(record) => record.id || `${record.employee_id}_${record.date}_${record.meal_type}`}
+          rowKey="id"
           loading={loading}
-          pagination={{ pageSize: 12, showSizeChanger: true }}
-          scroll={{ x: 800 }}
+          scroll={{ x: 1400 }}
+          pagination={{
+            pageSize: 15,
+            showSizeChanger: true,
+            pageSizeOptions: ["10", "15", "25", "50", "100"]
+          }}
         />
       </Card>
     </div>

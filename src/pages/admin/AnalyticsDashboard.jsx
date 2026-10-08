@@ -18,6 +18,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { getMealAllocations, formatDateKey } from "../../services/firebase/mealService";
 import { getEmployees } from "../../services/firebase/employeeService";
+import { normalizePaymentType } from "../../services/firebase/categoryService";
 import { generateFormattedMealReport } from "../../utils/excelReportGenerator";
 
 const { Title, Text, Paragraph } = Typography;
@@ -85,9 +86,9 @@ export default function AnalyticsDashboard() {
   const lunchCount = filteredAllocations.filter((a) => a.meal_type === "Lunch").length;
   const dinnerCount = filteredAllocations.filter((a) => a.meal_type === "Dinner").length;
 
-  const freeCount = filteredAllocations.filter((a) => (a.pay_category || "").toLowerCase().includes("free")).length;
-  const halfPaidCount = filteredAllocations.filter((a) => (a.pay_category || "").toLowerCase().includes("half")).length;
-  const notPaidCount = filteredAllocations.filter((a) => (a.pay_category || "").toLowerCase().includes("not")).length;
+  const fullPaidCount = filteredAllocations.filter((a) => normalizePaymentType(a.pay_category || a.category_employment) === "Full Paid").length;
+  const halfPaidCount = filteredAllocations.filter((a) => normalizePaymentType(a.pay_category || a.category_employment) === "Half Paid").length;
+  const notPaidCount = filteredAllocations.filter((a) => normalizePaymentType(a.pay_category || a.category_employment) === "Not Paid").length;
 
   // Department Leaderboard
   const departmentBreakdown = useMemo(() => {
@@ -124,7 +125,7 @@ export default function AnalyticsDashboard() {
   };
 
   return (
-    <div style={{ maxWidth: 1250, margin: "0 auto", width: "100%" }}>
+    <div style={{ maxWidth: 1600, margin: "0 auto", width: "100%" }}>
       {/* Top Header & Filter */}
       <div
         style={{
@@ -304,16 +305,16 @@ export default function AnalyticsDashboard() {
             className="modern-card"
           >
             <Row gutter={[16, 16]} style={{ textAlign: "center" }}>
-              <Col span={8}>
+              <Col xs={24} sm={8}>
                 <div style={{ padding: "16px 8px", background: "#ecfdf5", borderRadius: 14, border: "1px solid #a7f3d0" }}>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: "#065f46" }}>{freeCount}</div>
-                  <div style={{ fontWeight: 700, fontSize: 13, color: "#047857", marginTop: 2 }}>Free Meals</div>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: "#065f46" }}>{fullPaidCount}</div>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: "#047857", marginTop: 2 }}>Full Paid</div>
                   <div style={{ fontSize: 11, color: "#059669", marginTop: 2 }}>
-                    {totalCount > 0 ? Math.round((freeCount / totalCount) * 100) : 0}% share
+                    {totalCount > 0 ? Math.round((fullPaidCount / totalCount) * 100) : 0}% share
                   </div>
                 </div>
               </Col>
-              <Col span={8}>
+              <Col xs={24} sm={8}>
                 <div style={{ padding: "16px 8px", background: "#fffbeb", borderRadius: 14, border: "1px solid #fde68a" }}>
                   <div style={{ fontSize: 24, fontWeight: 800, color: "#92400e" }}>{halfPaidCount}</div>
                   <div style={{ fontWeight: 700, fontSize: 13, color: "#b45309", marginTop: 2 }}>Half Paid</div>
@@ -322,7 +323,7 @@ export default function AnalyticsDashboard() {
                   </div>
                 </div>
               </Col>
-              <Col span={8}>
+              <Col xs={24} sm={8}>
                 <div style={{ padding: "16px 8px", background: "#fef2f2", borderRadius: 14, border: "1px solid #fecaca" }}>
                   <div style={{ fontSize: 24, fontWeight: 800, color: "#991b1b" }}>{notPaidCount}</div>
                   <div style={{ fontWeight: 700, fontSize: 13, color: "#b91c1c", marginTop: 2 }}>Not Paid</div>

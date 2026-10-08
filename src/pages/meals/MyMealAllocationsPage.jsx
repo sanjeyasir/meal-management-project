@@ -90,7 +90,11 @@ export default function MyMealAllocationsPage() {
       title: "Payment Category",
       dataIndex: "pay_category",
       key: "pay_category",
-      render: (c) => <Tag color="cyan">{c || "Free Meal"}</Tag>
+      render: (c, r) => {
+        const norm = (c || "").toLowerCase().includes("half") ? "Half Paid" : (c || "").toLowerCase().includes("not") ? "Not Paid" : "Full Paid";
+        const color = norm === "Full Paid" ? "green" : norm === "Half Paid" ? "orange" : "red";
+        return <Tag color={color} style={{ fontWeight: 700 }}>{norm}</Tag>;
+      }
     },
     {
       title: "Status",

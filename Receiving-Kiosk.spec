@@ -3,7 +3,7 @@ from PyInstaller.utils.hooks import collect_all
 
 datas = []
 binaries = []
-hiddenimports = ['desktopapp.config', 'desktopapp.api_client', 'desktopapp.middleware', 'desktopapp.sound_utils', 'requests', 'winsound']
+hiddenimports = ['desktopapp.config', 'desktopapp.api_client', 'desktopapp.middleware', 'desktopapp.sound_utils', 'desktopapp.i18n', 'requests', 'winsound']
 tmp_ret = collect_all('customtkinter')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 

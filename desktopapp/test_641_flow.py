@@ -5,7 +5,11 @@ import requests
 import json
 import datetime
 
-BASE_URL = "https://api-iv2t7b42ta-uc.a.run.app"
+import os
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from desktopapp.config import API_BASE_URL
+BASE_URL = API_BASE_URL
 
 def run_tests():
     print(f"=== TESTING CLOUD API SCHEMA VALIDATION ===")

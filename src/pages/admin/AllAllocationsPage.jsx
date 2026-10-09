@@ -9,15 +9,10 @@ import {
   Space,
   DatePicker,
   Select,
-  Popconfirm,
   message,
   Row,
   Col,
-  Statistic,
-  Tooltip,
-  Avatar,
-  Divider,
-  Radio
+  Tooltip
 } from "antd";
 import {
   DownloadOutlined,
@@ -25,18 +20,13 @@ import {
   SearchOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
-  DeleteOutlined,
-  TableOutlined,
   FileExcelOutlined,
-  FilterOutlined,
-  CoffeeOutlined,
-  CalendarOutlined
+  CalendarOutlined,
+  HistoryOutlined
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import {
   getMealAllocations,
-  updateMealAllocationStatus,
-  deleteMealAllocation,
   formatDateKey
 } from "../../services/firebase/mealService";
 import { getCompanies } from "../../services/firebase/companyService";
@@ -44,7 +34,7 @@ import { normalizePaymentType, getCategories } from "../../services/firebase/cat
 import { generateFormattedMealReport } from "../../utils/excelReportGenerator";
 import { formatSriLankaDateTime } from "../../utils/timeUtils";
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 const { Option } = Select;
 const { RangePicker } = DatePicker;
 
@@ -63,20 +53,25 @@ export default function AllAllocationsPage() {
   const [companyFilter, setCompanyFilter] = useState("ALL");
   const [dateRange, setDateRange] = useState(null); // From-To Range [dayjs, dayjs]
 
+  const todayStr = formatDateKey(new Date());
+
   const loadAllocations = async () => {
     setLoading(true);
     try {
-      const [data, allComps, allCats] = await Promise.all([
+      const [allData, allComps, allCats] = await Promise.all([
         getMealAllocations(),
         getCompanies(),
         getCategories()
       ]);
-      setAllocations(data);
+
+      // Filter entries to come from previous days (archived historical allocations where date < today)
+      const pastAllocations = allData.filter((item) => item.date && item.date < todayStr);
+      setAllocations(pastAllocations);
       setCompanies(allComps);
       setCategories(allCats);
     } catch (err) {
-      console.error("Error loading allocations:", err);
-      message.error("Failed loading all meal allocations.");
+      console.error("Error loading previous allocations:", err);
+      message.error("Failed loading previous day meal allocations.");
     } finally {
       setLoading(false);
     }
@@ -103,36 +98,6 @@ export default function AllAllocationsPage() {
     return normalizePaymentType(masterSubsidy);
   };
 
-  const handleToggleStatus = async (record) => {
-    const isCurrentlyReceived = (record.status || "").toLowerCase() === "recieved" || (record.status || "").toLowerCase() === "received";
-    const newStatus = isCurrentlyReceived ? "Ordered" : "Recieved";
-    try {
-      const res = await updateMealAllocationStatus(record.id, newStatus);
-      if (res.success) {
-        message.success(`Status updated to ${newStatus}`);
-        loadAllocations();
-      } else {
-        message.error(res.message || "Failed to update status.");
-      }
-    } catch (err) {
-      message.error(`Status update error: ${err.message}`);
-    }
-  };
-
-  const handleDelete = async (id) => {
-    try {
-      const res = await deleteMealAllocation(id, true);
-      if (res.success) {
-        message.success("Allocation removed successfully.");
-        loadAllocations();
-      } else {
-        message.error(res.message || "Failed to delete allocation.");
-      }
-    } catch (err) {
-      message.error(`Delete error: ${err.message}`);
-    }
-  };
-
   // Filter allocations
   const filteredAllocations = useMemo(() => {
     return allocations.filter((item) => {
@@ -144,7 +109,7 @@ export default function AllAllocationsPage() {
       }
 
       // 2. Status Filter
-      const isRecv = (item.status || "").toLowerCase() === "recieved" || (item.status || "").toLowerCase() === "received";
+      const isRecv = (item.status || "").toLowerCase() === "recieved" || (item.status || "").toLowerCase() === "received" || item.received === true;
       if (statusFilter === "ORDERED" && isRecv) return false;
       if (statusFilter === "RECEIVED" && !isRecv) return false;
 
@@ -164,14 +129,14 @@ export default function AllAllocationsPage() {
         if ((item.company || "").toLowerCase() !== companyFilter.toLowerCase()) return false;
       }
 
-      // 6. Search Query
+      // 6. Text Search Filter
       if (searchText.trim()) {
-        const s = searchText.toLowerCase();
-        const name = (item.employee_name || "").toLowerCase();
-        const empId = (item.employee_id || "").toLowerCase();
+        const q = searchText.toLowerCase();
+        const empName = (item.employee_name || item.name || "").toLowerCase();
+        const empId = (item.employee_id || item.emp_id || "").toLowerCase();
         const comp = (item.company || "").toLowerCase();
         const cat = (item.category_name || item.category_employment || "").toLowerCase();
-        if (!name.includes(s) && !empId.includes(s) && !comp.includes(s) && !cat.includes(s)) {
+        if (!empName.includes(q) && !empId.includes(q) && !comp.includes(q) && !cat.includes(q)) {
           return false;
         }
       }
@@ -180,134 +145,96 @@ export default function AllAllocationsPage() {
     });
   }, [allocations, dateRange, statusFilter, mealTypeFilter, payCategoryFilter, companyFilter, searchText, categoryMap]);
 
-  // Aggregate Metrics for filtered data
-  const totalCount = filteredAllocations.length;
-  const receivedCount = filteredAllocations.filter(
-    (a) => (a.status || "").toLowerCase() === "recieved" || (a.status || "").toLowerCase() === "received"
-  ).length;
-  const pendingCount = totalCount - receivedCount;
-  const breakfastCount = filteredAllocations.filter((a) => a.meal_type === "Breakfast").length;
-  const lunchCount = filteredAllocations.filter((a) => a.meal_type === "Lunch").length;
-  const dinnerCount = filteredAllocations.filter((a) => a.meal_type === "Dinner").length;
-
-  const fullPaidCount = filteredAllocations.filter((a) => getAutoSubsidy(a) === "Full Paid").length;
-  const halfPaidCount = filteredAllocations.filter((a) => getAutoSubsidy(a) === "Half Paid").length;
-  const notPaidCount = filteredAllocations.filter((a) => getAutoSubsidy(a) === "Not Paid").length;
-
-  // Formatted Transaction Report Excel Export
-  const handleExportFormattedExcel = async () => {
+  // Handle Export Previous Allocations to Excel
+  const handleExportExcel = async () => {
     if (filteredAllocations.length === 0) {
-      message.warning("No allocations to export in current filter!");
+      message.warning("No records to export in current filter!");
       return;
     }
 
     setExporting(true);
     try {
-      let rangeLabel = "All Records";
+      let dateRangeLabel = "Previous Days Historical Allocations";
       if (dateRange && dateRange[0] && dateRange[1]) {
-        rangeLabel = `${dateRange[0].format("YYYY-MM-DD")} to ${dateRange[1].format("YYYY-MM-DD")}`;
+        dateRangeLabel = `${dateRange[0].format("YYYY-MM-DD")} to ${dateRange[1].format("YYYY-MM-DD")}`;
       }
 
       await generateFormattedMealReport({
         allocations: filteredAllocations,
-        title: "HAYLEYS ECO SOLUTIONS - MEAL ALLOCATIONS REPORT",
-        dateRangeStr: rangeLabel,
+        title: "HAYLEYS ECO SOLUTIONS - PREVIOUS DAY ALLOCATIONS REPORT",
+        dateRangeStr: dateRangeLabel,
         generatedBy: "System Administrator",
         categoryMap
       });
 
-      message.success("Allocations transaction report downloaded successfully!");
+      message.success("Previous allocations Excel report exported successfully!");
     } catch (err) {
       console.error("Export error:", err);
-      message.error(`Failed to export report: ${err.message}`);
+      message.error(`Failed to export Excel report: ${err.message}`);
     } finally {
       setExporting(false);
     }
   };
 
-  const handleResetFilters = () => {
-    setSearchText("");
-    setDateRange(null);
-    setStatusFilter("ALL");
-    setMealTypeFilter("ALL");
-    setPayCategoryFilter("ALL");
-    setCompanyFilter("ALL");
-  };
-
-  const handleQuickPreset = (days) => {
-    if (days === 0) {
-      // Today
-      const today = dayjs();
-      setDateRange([today, today]);
-    } else if (days === -1) {
-      // Yesterday
-      const yest = dayjs().subtract(1, "day");
-      setDateRange([yest, yest]);
-    } else if (days === 7) {
-      // Next 7 days
-      setDateRange([dayjs(), dayjs().add(7, "day")]);
-    } else if (days === -7) {
-      // Past 7 days
-      setDateRange([dayjs().subtract(7, "day"), dayjs()]);
-    } else if (days === 30) {
-      // Current Month
-      setDateRange([dayjs().startOf("month"), dayjs().endOf("month")]);
-    }
-  };
-
+  // Table Columns (Read-only, NO delete buttons)
   const columns = [
     {
-      title: "Date",
+      title: "Allocation Date",
       dataIndex: "date",
       key: "date",
-      width: 115,
+      width: 140,
       fixed: "left",
-      render: (d) => <Text strong style={{ color: "#0f172a" }}>{d}</Text>,
-      sorter: (a, b) => (a.date || "").localeCompare(b.date || "")
+      render: (d) => (
+        <span style={{ fontWeight: 800, color: "#0f172a" }}>
+          {d}
+        </span>
+      ),
+      sorter: (a, b) => (b.date || "").localeCompare(a.date || "")
     },
     {
       title: "Employee ID",
       dataIndex: "employee_id",
       key: "employee_id",
-      width: 130,
+      width: 120,
       fixed: "left",
-      render: (id) => (
+      render: (id, r) => (
         <Tag color="blue" style={{ fontWeight: 700, padding: "2px 8px" }}>
-          {id}
+          {id || r.emp_id || "-"}
         </Tag>
       ),
       sorter: (a, b) => String(a.employee_id || "").localeCompare(String(b.employee_id || ""))
     },
     {
-      title: "Full Name",
+      title: "Employee Name",
       dataIndex: "employee_name",
       key: "employee_name",
-      width: 200,
-      render: (name) => <span style={{ fontWeight: 700, color: "#0f172a" }}>{name || "Staff"}</span>,
+      width: 190,
+      fixed: "left",
+      render: (name, r) => (
+        <span style={{ fontWeight: 700, color: "#0f172a" }}>
+          {name || r.name || "Staff"}
+        </span>
+      ),
       sorter: (a, b) => (a.employee_name || "").localeCompare(b.employee_name || "")
     },
     {
       title: "Company",
       dataIndex: "company",
       key: "company",
-      width: 220,
-      render: (comp) => <Tag color="geekblue" style={{ fontWeight: 600 }}>{comp || "Hayleys Eco Solutions"}</Tag>
+      width: 190,
+      render: (c) => <Tag color="geekblue" style={{ fontWeight: 600 }}>{c || "Hayleys Eco Solutions"}</Tag>
     },
     {
-      title: "Meal Category",
+      title: "Category",
       dataIndex: "category_name",
       key: "category_name",
-      width: 130,
-      render: (cat, r) => (
-        <Tag color="cyan" style={{ fontWeight: 600 }}>
-          {cat || r.category_employment || "Staff"}
-        </Tag>
-      )
+      width: 140,
+      render: (cat, r) => <Tag color="cyan" style={{ fontWeight: 600 }}>{cat || r.category_employment || "Staff"}</Tag>
     },
     {
       title: "Payment Plan",
       key: "pay_category",
-      width: 140,
+      width: 130,
       render: (_, r) => {
         const norm = getAutoSubsidy(r);
         const color = norm === "Full Paid" ? "green" : norm === "Half Paid" ? "orange" : "red";
@@ -323,89 +250,61 @@ export default function AllAllocationsPage() {
       dataIndex: "meal_type",
       key: "meal_type",
       width: 120,
-      render: (m) => {
-        const icon = m === "Breakfast" ? "☕" : m === "Lunch" ? "🍲" : "🍽️";
-        const color = m === "Breakfast" ? "orange" : m === "Lunch" ? "green" : "purple";
-        return (
-          <Tag color={color} style={{ fontWeight: 700, borderRadius: 6, fontSize: "0.85rem", padding: "2px 8px" }}>
-            {icon} {m}
+      render: (type) => {
+        let color = "orange";
+        if (type === "Lunch") color = "green";
+        if (type === "Dinner") color = "purple";
+        return <Tag color={color} style={{ fontWeight: 700 }}>{type}</Tag>;
+      }
+    },
+    {
+      title: "Status",
+      dataIndex: "status",
+      key: "status",
+      width: 120,
+      render: (status, r) => {
+        const isRecv = (status || "").toLowerCase() === "recieved" || (status || "").toLowerCase() === "received" || r.received === true;
+        return isRecv ? (
+          <Tag color="success" icon={<CheckCircleOutlined />} style={{ fontWeight: 700 }}>
+            Received
+          </Tag>
+        ) : (
+          <Tag color="processing" icon={<ClockCircleOutlined />} style={{ fontWeight: 600 }}>
+            Ordered
           </Tag>
         );
       }
     },
     {
-      title: "Status (Click to Toggle)",
-      dataIndex: "status",
-      key: "status",
-      width: 150,
-      render: (s, record) => {
-        const isRecv = (s || "").toLowerCase() === "recieved" || (s || "").toLowerCase() === "received";
-        return (
-          <Tooltip title="Click to toggle status between Ordered and Received">
-            <Tag
-              icon={isRecv ? <CheckCircleOutlined /> : <ClockCircleOutlined />}
-              color={isRecv ? "success" : "processing"}
-              style={{ cursor: "pointer", fontWeight: 700, borderRadius: 6, padding: "3px 10px" }}
-              onClick={() => handleToggleStatus(record)}
-            >
-              {isRecv ? "Received" : "Ordered"}
-            </Tag>
-          </Tooltip>
-        );
-      }
-    },
-    {
-      title: "Created At (SL Time)",
+      title: "Ordered Time (SL Time)",
       dataIndex: "created_at",
       key: "created_at",
-      width: 180,
-      render: (val) => (
-        <span style={{ fontSize: "0.85rem", color: "#475569" }}>
-          {formatSriLankaDateTime(val)}
-        </span>
-      )
+      width: 170,
+      render: (dt) => <span style={{ color: "#334155", fontSize: "0.85rem", fontWeight: 600 }}>{formatSriLankaDateTime(dt)}</span>
     },
     {
-      title: "Dispensed At (SL Time)",
+      title: "Dispensed Time (SL Time)",
       dataIndex: "received_at",
       key: "received_at",
-      width: 180,
-      render: (val) => (
-        <span style={{ fontSize: "0.85rem", color: val ? "#059669" : "#94a3b8", fontWeight: val ? 700 : 400 }}>
-          {formatSriLankaDateTime(val)}
-        </span>
-      )
-    },
-    {
-      title: "Actions",
-      key: "actions",
-      width: 80,
-      fixed: "right",
-      render: (_, r) => (
-        <Popconfirm
-          title="Delete Meal Allocation"
-          description="Are you sure you want to permanently delete this record?"
-          onConfirm={() => handleDelete(r.id || r.doc_id)}
-          okText="Yes, Delete"
-          cancelText="No"
-          okButtonProps={{ danger: true }}
-        >
-          <Button danger type="text" icon={<DeleteOutlined />} size="small" />
-        </Popconfirm>
-      )
+      width: 170,
+      render: (dt, r) => {
+        const isRecv = (r.status || "").toLowerCase() === "recieved" || (r.status || "").toLowerCase() === "received" || r.received === true;
+        if (!isRecv || !dt) return <span style={{ color: "#94a3b8" }}>-</span>;
+        return <span style={{ color: "#059669", fontSize: "0.85rem", fontWeight: 700 }}>{formatSriLankaDateTime(dt)}</span>;
+      }
     }
   ];
 
   return (
     <div style={{ maxWidth: 1600, margin: "0 auto", width: "100%" }}>
-      {/* Header Banner */}
+      {/* Top Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 14 }}>
         <div>
           <Title level={2} style={{ margin: 0, fontWeight: 800, color: "#0f172a" }}>
-            All Allocations Master Report
+            Previous Day Allocations
           </Title>
           <Text type="secondary" style={{ fontSize: 14, color: "#475569" }}>
-            Comprehensive canteen allocations database ({filteredAllocations.length} records matching).
+            Read-only historical allocations audit from archived records prior to today (<b>{todayStr}</b>).
           </Text>
         </div>
 
@@ -413,90 +312,28 @@ export default function AllAllocationsPage() {
           <Button
             type="primary"
             icon={<FileExcelOutlined />}
-            onClick={handleExportFormattedExcel}
+            size="large"
             loading={exporting}
+            onClick={handleExportExcel}
             style={{
-              fontWeight: 700,
-              background: "linear-gradient(135deg, #059669 0%, #064e3b 100%)",
+              background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
               borderColor: "#059669",
+              fontWeight: 700,
               borderRadius: 8,
-              boxShadow: "0 4px 12px -2px rgba(5, 150, 105, 0.4)"
+              boxShadow: "0 4px 12px rgba(5, 150, 105, 0.3)",
+              height: 40
             }}
           >
-            Export Formatted Excel Report
+            Export Historical Excel (.xlsx)
           </Button>
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={loadAllocations}
-            loading={loading}
-            style={{ borderRadius: 8 }}
-          >
+
+          <Button icon={<ReloadOutlined />} onClick={loadAllocations} loading={loading} style={{ borderRadius: 8, height: 40 }}>
             Refresh
           </Button>
         </Space>
       </div>
 
-      {/* KPI Overview Summary Cards */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
-        <Col xs={12} sm={6} lg={4}>
-          <Card bordered={false} style={{ borderRadius: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
-            <Statistic
-              title={<span style={{ fontWeight: 600, color: "#64748b" }}>Total Scheduled</span>}
-              value={totalCount}
-              valueStyle={{ fontWeight: 800, color: "#0f172a" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6} lg={4}>
-          <Card bordered={false} style={{ borderRadius: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
-            <Statistic
-              title={<span style={{ fontWeight: 600, color: "#059669" }}>Dispensed (Received)</span>}
-              value={receivedCount}
-              valueStyle={{ fontWeight: 800, color: "#059669" }}
-              prefix={<CheckCircleOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6} lg={4}>
-          <Card bordered={false} style={{ borderRadius: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
-            <Statistic
-              title={<span style={{ fontWeight: 600, color: "#2563eb" }}>Pending (Ordered)</span>}
-              value={pendingCount}
-              valueStyle={{ fontWeight: 800, color: "#2563eb" }}
-              prefix={<ClockCircleOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6} lg={4}>
-          <Card bordered={false} style={{ borderRadius: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
-            <Statistic
-              title={<span style={{ fontWeight: 600, color: "#059669" }}>Full Paid</span>}
-              value={fullPaidCount}
-              valueStyle={{ fontWeight: 800, color: "#059669" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6} lg={4}>
-          <Card bordered={false} style={{ borderRadius: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
-            <Statistic
-              title={<span style={{ fontWeight: 600, color: "#d97706" }}>Half Paid</span>}
-              value={halfPaidCount}
-              valueStyle={{ fontWeight: 800, color: "#d97706" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6} lg={4}>
-          <Card bordered={false} style={{ borderRadius: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
-            <Statistic
-              title={<span style={{ fontWeight: 600, color: "#dc2626" }}>Not Paid</span>}
-              value={notPaidCount}
-              valueStyle={{ fontWeight: 800, color: "#dc2626" }}
-            />
-          </Card>
-        </Col>
-      </Row>
-
-      {/* Filter Control Bar with Prominent From - To Date Range */}
+      {/* Applied Filters Card (Replaces top statistic cards as requested) */}
       <Card
         bordered={false}
         style={{
@@ -507,10 +344,9 @@ export default function AllAllocationsPage() {
         bodyStyle={{ padding: "16px 20px" }}
       >
         <Row gutter={[12, 12]} align="middle">
-          {/* From-To Date Range Picker */}
-          <Col xs={24} sm={12} md={7}>
-            <Text strong style={{ display: "block", marginBottom: 6, fontSize: 13, color: "#0f172a" }}>
-              📅 From - To Date Range:
+          <Col xs={24} sm={12} md={6}>
+            <Text strong style={{ display: "block", marginBottom: 4, fontSize: 12, color: "#0f172a" }}>
+              Filter by Date Range (From - To):
             </Text>
             <RangePicker
               style={{ width: "100%" }}
@@ -520,59 +356,38 @@ export default function AllAllocationsPage() {
             />
           </Col>
 
-          {/* Quick Presets */}
           <Col xs={24} sm={12} md={5}>
-            <Text strong style={{ display: "block", marginBottom: 6, fontSize: 13, color: "#0f172a" }}>
-              Quick Presets:
-            </Text>
-            <Space size="small" wrap>
-              <Button size="small" onClick={() => handleQuickPreset(0)}>Today</Button>
-              <Button size="small" onClick={() => handleQuickPreset(-1)}>Yesterday</Button>
-              <Button size="small" onClick={() => handleQuickPreset(7)}>+7 Days</Button>
-              <Button size="small" onClick={() => handleQuickPreset(-7)}>-7 Days</Button>
-            </Space>
-          </Col>
-
-          {/* Search Box */}
-          <Col xs={24} sm={12} md={5}>
-            <Text strong style={{ display: "block", marginBottom: 6, fontSize: 13, color: "#0f172a" }}>
-              Search:
+            <Text strong style={{ display: "block", marginBottom: 4, fontSize: 12, color: "#0f172a" }}>
+              Search Employee / ID:
             </Text>
             <Input
               prefix={<SearchOutlined style={{ color: "#94a3b8" }} />}
-              placeholder="Employee, ID, or Section..."
+              placeholder="Search Name, ID, Company..."
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               allowClear
             />
           </Col>
 
-          {/* Status Filter */}
           <Col xs={12} sm={6} md={3}>
-            <Text strong style={{ display: "block", marginBottom: 6, fontSize: 13, color: "#0f172a" }}>
-              Status:
+            <Text strong style={{ display: "block", marginBottom: 4, fontSize: 12, color: "#0f172a" }}>
+              Company:
             </Text>
-            <Select
-              value={statusFilter}
-              onChange={setStatusFilter}
-              style={{ width: "100%" }}
-            >
-              <Option value="ALL">All Statuses</Option>
-              <Option value="ORDERED">Ordered</Option>
-              <Option value="RECEIVED">Received</Option>
+            <Select style={{ width: "100%" }} value={companyFilter} onChange={setCompanyFilter}>
+              <Option value="ALL">All Companies</Option>
+              {companies.map((c) => (
+                <Option key={c.id || c.name} value={c.name}>
+                  {c.name}
+                </Option>
+              ))}
             </Select>
           </Col>
 
-          {/* Meal Slot Filter */}
-          <Col xs={12} sm={6} md={2}>
-            <Text strong style={{ display: "block", marginBottom: 6, fontSize: 13, color: "#0f172a" }}>
-              Slot:
+          <Col xs={12} sm={6} md={3}>
+            <Text strong style={{ display: "block", marginBottom: 4, fontSize: 12, color: "#0f172a" }}>
+              Meal Slot:
             </Text>
-            <Select
-              value={mealTypeFilter}
-              onChange={setMealTypeFilter}
-              style={{ width: "100%" }}
-            >
+            <Select style={{ width: "100%" }} value={mealTypeFilter} onChange={setMealTypeFilter}>
               <Option value="ALL">All Slots</Option>
               <Option value="Breakfast">Breakfast</Option>
               <Option value="Lunch">Lunch</Option>
@@ -580,49 +395,48 @@ export default function AllAllocationsPage() {
             </Select>
           </Col>
 
-          {/* Subsidy Plan Filter */}
           <Col xs={12} sm={6} md={3}>
-            <Text strong style={{ display: "block", marginBottom: 6, fontSize: 13, color: "#0f172a" }}>
+            <Text strong style={{ display: "block", marginBottom: 4, fontSize: 12, color: "#0f172a" }}>
+              Status:
+            </Text>
+            <Select style={{ width: "100%" }} value={statusFilter} onChange={setStatusFilter}>
+              <Option value="ALL">All Status</Option>
+              <Option value="RECEIVED">Received</Option>
+              <Option value="ORDERED">Ordered</Option>
+            </Select>
+          </Col>
+
+          <Col xs={12} sm={6} md={2}>
+            <Text strong style={{ display: "block", marginBottom: 4, fontSize: 12, color: "#0f172a" }}>
               Subsidy:
             </Text>
-            <Select
-              value={payCategoryFilter}
-              onChange={setPayCategoryFilter}
-              style={{ width: "100%" }}
-            >
-              <Option value="ALL">All Plans</Option>
-              <Option value="Full Paid">Full Paid</Option>
-              <Option value="Half Paid">Half Paid</Option>
-              <Option value="Not Paid">Not Paid</Option>
+            <Select style={{ width: "100%" }} value={payCategoryFilter} onChange={setPayCategoryFilter}>
+              <Option value="ALL">All</Option>
+              <Option value="Full Paid">Full</Option>
+              <Option value="Half Paid">Half</Option>
+              <Option value="Not Paid">None</Option>
             </Select>
           </Col>
 
-          {/* Company Filter */}
-          <Col xs={12} sm={6} md={3}>
-            <Text strong style={{ display: "block", marginBottom: 6, fontSize: 13, color: "#0f172a" }}>
-              Company:
-            </Text>
-            <Select
-              value={companyFilter}
-              onChange={setCompanyFilter}
-              style={{ width: "100%" }}
+          <Col xs={24} sm={12} md={2} style={{ display: "flex", alignItems: "flex-end" }}>
+            <Button
+              onClick={() => {
+                setDateRange(null);
+                setSearchText("");
+                setCompanyFilter("ALL");
+                setMealTypeFilter("ALL");
+                setStatusFilter("ALL");
+                setPayCategoryFilter("ALL");
+              }}
+              style={{ width: "100%", borderRadius: 8, height: 32, marginTop: 18 }}
             >
-              <Option value="ALL">All Companies</Option>
-              {companies.map((c) => (
-                <Option key={c.name} value={c.name}>{c.name}</Option>
-              ))}
-            </Select>
+              Reset
+            </Button>
           </Col>
         </Row>
-
-        <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
-          <Button onClick={handleResetFilters} size="small" style={{ borderRadius: 6 }}>
-            Reset All Filters
-          </Button>
-        </div>
       </Card>
 
-      {/* Master Allocations Table */}
+      {/* Historical Allocations Table (Read-only) */}
       <Card
         bordered={false}
         style={{
@@ -632,18 +446,16 @@ export default function AllAllocationsPage() {
         bodyStyle={{ padding: 0 }}
       >
         <Table
-          bordered
-          size="middle"
           dataSource={filteredAllocations}
           columns={columns}
           rowKey="id"
           loading={loading}
-          scroll={{ x: 1550 }}
+          scroll={{ x: 1300 }}
           pagination={{
             pageSize: 15,
             showSizeChanger: true,
             pageSizeOptions: ["10", "15", "25", "50", "100"],
-            showTotal: (total) => `Total ${total} Allocations`
+            showTotal: (total) => `Total ${total} Previous Day Allocations`
           }}
         />
       </Card>

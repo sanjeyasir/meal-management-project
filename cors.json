@@ -1,0 +1,22 @@
+[
+  {
+    "origin": [
+      "https://meal-management-project.web.app",
+      "https://meal-management-project.firebaseapp.com",
+      "http://localhost:5173",
+      "http://localhost:3000",
+      "*"
+    ],
+    "method": ["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS"],
+    "responseHeader": [
+      "Content-Type",
+      "Authorization",
+      "Content-Length",
+      "User-Agent",
+      "x-goog-resumable",
+      "x-firebase-storage-version",
+      "x-goog-upload-protocol"
+    ],
+    "maxAgeSeconds": 3600
+  }
+]

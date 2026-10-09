@@ -17,9 +17,9 @@ function formatDateKey(d) {
 }
 
 /**
- * Find all matching meal allocations for an employee on a target date
+ * Fetch all matching meal allocations for an employee in a single parallel query
  */
-async function findAllocationsForEmployee(empId, dateStr) {
+async function getAllAllocationsForEmployee(empId) {
   const keyStr = String(empId).trim();
   const keysToTry = [keyStr];
 
@@ -31,29 +31,20 @@ async function findAllocationsForEmployee(empId, dateStr) {
       keysToTry.push(stripped);
     }
   }
+  const uniqueKeys = Array.from(new Set(keysToTry));
 
+  const promises = [];
+  for (const k of uniqueKeys) {
+    promises.push(db.collection(MEAL_COLLECTION).where("employee_id", "==", k).get());
+    promises.push(db.collection(MEAL_COLLECTION).where("emp_id", "==", k).get());
+  }
+
+  const snapshots = await Promise.all(promises);
   const seenIds = new Set();
   const results = [];
 
-  for (const k of keysToTry) {
-    // 1. Check employee_id
-    const snap1 = await db.collection(MEAL_COLLECTION)
-      .where("employee_id", "==", k)
-      .where("date", "==", dateStr)
-      .get();
-    snap1.forEach(doc => {
-      if (!seenIds.has(doc.id)) {
-        seenIds.add(doc.id);
-        results.push({ id: doc.id, ...doc.data() });
-      }
-    });
-
-    // 2. Check emp_id
-    const snap2 = await db.collection(MEAL_COLLECTION)
-      .where("emp_id", "==", k)
-      .where("date", "==", dateStr)
-      .get();
-    snap2.forEach(doc => {
+  for (const snap of snapshots) {
+    snap.forEach(doc => {
       if (!seenIds.has(doc.id)) {
         seenIds.add(doc.id);
         results.push({ id: doc.id, ...doc.data() });
@@ -62,6 +53,15 @@ async function findAllocationsForEmployee(empId, dateStr) {
   }
 
   return results;
+}
+
+/**
+ * Find all matching meal allocations for an employee on a target date
+ */
+async function findAllocationsForEmployee(empId, dateStr) {
+  const all = await getAllAllocationsForEmployee(empId);
+  if (!dateStr) return all;
+  return all.filter(a => a.date === dateStr);
 }
 
 // 1. Place Meal Order
@@ -195,25 +195,43 @@ router.post("/dispense", async (req, res) => {
       });
     }
 
-    // Step 2: Look for unreceived meal for specific mealType (or first unreceived)
+    // Step 2: Look for meal allocation
     let targetAlloc = null;
     if (mealType) {
-      targetAlloc = allAllocations.find(a => a.meal_type === mealType && !a.received && a.status !== "Received");
-    }
-    if (!targetAlloc) {
+      const typeAllocations = allAllocations.filter(a => a.meal_type === mealType);
+      if (typeAllocations.length === 0) {
+        return res.status(404).json({
+          success: false,
+          dispensed: false,
+          message: `No active ${mealType} order found for Employee ${empId} on ${targetDate}.`
+        });
+      }
+      targetAlloc = typeAllocations.find(a => !a.received && a.status !== "Received");
+      if (!targetAlloc) {
+        const alreadyReceivedAlloc = typeAllocations[0];
+        return res.status(409).json({
+          success: false,
+          dispensed: false,
+          alreadyReceived: true,
+          alreadyDispensed: true,
+          mealType: mealType,
+          receivedAt: alreadyReceivedAlloc.received_at || "earlier today",
+          message: `${mealType} already received by Employee ${empId} on ${targetDate}.`
+        });
+      }
+    } else {
       targetAlloc = allAllocations.find(a => !a.received && a.status !== "Received");
-    }
-
-    // If all are already received:
-    if (!targetAlloc) {
-      const firstAlloc = allAllocations[0];
-      return res.status(409).json({
-        success: false,
-        dispensed: false,
-        alreadyReceived: true,
-        receivedAt: firstAlloc.received_at || "earlier today",
-        message: `Meal already received by Employee ${empId} on ${targetDate}.`
-      });
+      if (!targetAlloc) {
+        const firstAlloc = allAllocations[0];
+        return res.status(409).json({
+          success: false,
+          dispensed: false,
+          alreadyReceived: true,
+          alreadyDispensed: true,
+          receivedAt: firstAlloc.received_at || "earlier today",
+          message: `All meal bookings already received by Employee ${empId} on ${targetDate}.`
+        });
+      }
     }
 
     // Dispense meal
@@ -290,22 +308,26 @@ router.get("/employee/:empId", async (req, res) => {
     } else {
       baseDate = new Date();
     }
-    const allAllocations = [];
 
-    for (let i = 0; i < days; i++) {
-      const d = new Date(baseDate);
-      d.setDate(baseDate.getDate() + i);
-      const dateStr = formatDateKey(d);
-      const dayAllocations = await findAllocationsForEmployee(empId, dateStr);
-      allAllocations.push(...dayAllocations);
-    }
+    const startDateStr = formatDateKey(baseDate);
+    const endDateObj = new Date(baseDate);
+    endDateObj.setDate(baseDate.getDate() + days - 1);
+    const endDateStr = formatDateKey(endDateObj);
+
+    const allAllocations = await getAllAllocationsForEmployee(empId);
+    const filteredAllocations = allAllocations.filter(a => {
+      const d = a.date || "";
+      return d >= startDateStr && d <= endDateStr;
+    });
+
+    filteredAllocations.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
 
     return res.json({
       success: true,
       employee_id: empId,
       emp_id: empId,
-      count: allAllocations.length,
-      data: allAllocations
+      count: filteredAllocations.length,
+      data: filteredAllocations
     });
   } catch (error) {
     return res.status(500).json({ success: false, error: error.message });
@@ -321,26 +343,25 @@ router.post("/check-allocations", async (req, res) => {
       return res.status(400).json({ success: false, message: "Missing employee ID" });
     }
 
-    const startDateObj = new Date(start_date || new Date());
-    const endDateObj = new Date(end_date || startDateObj);
+    const startDateStr = formatDateKey(start_date || new Date());
+    const endDateStr = formatDateKey(end_date || start_date || new Date());
 
-    const allocations = [];
-    const curr = new Date(startDateObj);
-    while (curr <= endDateObj) {
-      const dateStr = formatDateKey(curr);
-      const dayAllocations = await findAllocationsForEmployee(resolvedId, dateStr);
-      allocations.push(...dayAllocations);
-      curr.setDate(curr.getDate() + 1);
-    }
+    const allAllocations = await getAllAllocationsForEmployee(resolvedId);
+    const matchingAllocations = allAllocations.filter(a => {
+      const d = a.date || "";
+      return d >= startDateStr && d <= endDateStr;
+    });
 
-    const hasExisting = allocations.length > 0;
+    matchingAllocations.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+
+    const hasExisting = matchingAllocations.length > 0;
     return res.json({
       success: true,
       hasExisting,
-      count: allocations.length,
-      allocations,
+      count: matchingAllocations.length,
+      allocations: matchingAllocations,
       message: hasExisting
-        ? `Employee ${resolvedId} already has ${allocations.length} meal(s) allocated in this date range.`
+        ? `Employee ${resolvedId} already has ${matchingAllocations.length} meal(s) allocated in this date range.`
         : "No existing allocations found for this date range."
     });
   } catch (error) {

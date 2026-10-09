@@ -41,6 +41,7 @@ def build_single_file_executable(name, entry_point):
         "--hidden-import", "desktopapp.api_client",
         "--hidden-import", "desktopapp.middleware",
         "--hidden-import", "desktopapp.sound_utils",
+        "--hidden-import", "desktopapp.i18n",
         "--hidden-import", "requests",
         "--hidden-import", "winsound",
         "--paths", PROJECT_ROOT,

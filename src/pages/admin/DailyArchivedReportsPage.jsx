@@ -18,6 +18,8 @@ import {
   Divider,
   Tooltip,
   Alert,
+  Radio,
+  Empty,
   message
 } from "antd";
 import {
@@ -32,7 +34,8 @@ import {
   EyeOutlined,
   DeleteOutlined,
   SyncOutlined,
-  SafetyCertificateOutlined,
+  AppstoreOutlined,
+  UnorderedListOutlined,
   CoffeeOutlined,
   FireOutlined
 } from "@ant-design/icons";
@@ -55,6 +58,7 @@ export default function DailyArchivedReportsPage() {
   const [loading, setLoading] = useState(true);
   const [archiving, setArchiving] = useState(false);
   const [downloadingId, setDownloadingId] = useState(null);
+  const [viewMode, setViewMode] = useState("cards"); // "cards" | "table"
 
   // Filters State
   const [customRange, setCustomRange] = useState(null);
@@ -189,7 +193,6 @@ export default function DailyArchivedReportsPage() {
     });
   }, [archivedReports, customRange, searchQuery]);
 
-  // Total summary metrics across all archives
   const totalDaysArchived = archivedReports.length;
   const totalArchivedMeals = archivedReports.reduce((sum, r) => sum + (r.total_allocations || 0), 0);
   const totalArchivedDispensed = archivedReports.reduce((sum, r) => sum + (r.dispensed_count || 0), 0);
@@ -198,7 +201,7 @@ export default function DailyArchivedReportsPage() {
   const yesterdayDate = getYesterdayDateKey();
   const isYesterdayArchived = archivedReports.some((r) => r.date === yesterdayDate);
 
-  // Table Columns
+  // Table Columns (for Table List mode)
   const columns = [
     {
       title: "Archive Date",
@@ -244,13 +247,13 @@ export default function DailyArchivedReportsPage() {
       render: (_, r) => (
         <Space size="small" wrap>
           <Tag color="orange" style={{ fontWeight: 700 }}>
-            ☕ {r.breakfast_count || 0} Breakfast
+            ☕ {r.breakfast_count || 0}
           </Tag>
           <Tag color="green" style={{ fontWeight: 700 }}>
-            🍲 {r.lunch_count || 0} Lunch
+            🍲 {r.lunch_count || 0}
           </Tag>
           <Tag color="purple" style={{ fontWeight: 700 }}>
-            🍽️ {r.dinner_count || 0} Dinner
+            🍽️ {r.dinner_count || 0}
           </Tag>
         </Space>
       )
@@ -258,7 +261,7 @@ export default function DailyArchivedReportsPage() {
     {
       title: "Payment / Subsidy Plan",
       key: "subsidies",
-      width: 230,
+      width: 210,
       render: (_, r) => (
         <Space size="small" wrap>
           <Tag color="green" style={{ fontWeight: 700 }}>
@@ -268,7 +271,7 @@ export default function DailyArchivedReportsPage() {
             Half: {r.half_paid_count || 0}
           </Tag>
           <Tag color="red" style={{ fontWeight: 700 }}>
-            Not Paid: {r.not_paid_count || 0}
+            None: {r.not_paid_count || 0}
           </Tag>
         </Space>
       )
@@ -276,11 +279,11 @@ export default function DailyArchivedReportsPage() {
     {
       title: "Storage & Archive Time",
       key: "storage_status",
-      width: 200,
+      width: 190,
       render: (_, r) => (
         <div>
-          <Tag color={r.download_url ? "cyan" : "default"} icon={<CloudUploadOutlined />} style={{ fontWeight: 700, borderRadius: 6 }}>
-            {r.download_url ? "Firebase Storage" : "Metadata Recorded"}
+          <Tag color="cyan" icon={<CloudUploadOutlined />} style={{ fontWeight: 700, borderRadius: 6 }}>
+            Firebase Storage
           </Tag>
           <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: 4 }}>
             {r.archived_at_formatted || formatSriLankaDateTime(r.archived_at)}
@@ -291,11 +294,11 @@ export default function DailyArchivedReportsPage() {
     {
       title: "Actions",
       key: "actions",
-      width: 190,
+      width: 180,
       fixed: "right",
       render: (_, record) => (
         <Space size="small">
-          <Tooltip title="Download formatted Excel (.xlsx) file">
+          <Tooltip title="Download 3-Day Historical Excel (.xlsx) file">
             <Button
               type="primary"
               size="small"
@@ -313,7 +316,7 @@ export default function DailyArchivedReportsPage() {
             </Button>
           </Tooltip>
 
-          <Tooltip title="View allocation details for this date">
+          <Tooltip title="View allocation details">
             <Button
               size="small"
               icon={<EyeOutlined />}
@@ -324,18 +327,9 @@ export default function DailyArchivedReportsPage() {
             </Button>
           </Tooltip>
 
-          <Tooltip title="Re-archive this date to Firebase Storage">
-            <Button
-              size="small"
-              icon={<SyncOutlined />}
-              onClick={() => archiveDailyAllocationsForDate(record.date, "Manual Sync").then(() => { message.success("Re-archived successfully!"); loadArchives(); })}
-              style={{ borderRadius: 6 }}
-            />
-          </Tooltip>
-
           <Popconfirm
             title="Delete Daily Archive"
-            description={`Delete archived record and storage file for ${record.date}?`}
+            description={`Delete archived record for ${record.date}?`}
             onConfirm={() => handleDelete(record.date)}
             okText="Yes, Delete"
             cancelText="No"
@@ -415,10 +409,10 @@ export default function DailyArchivedReportsPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 14 }}>
         <div>
           <Title level={2} style={{ margin: 0, fontWeight: 800, color: "#0f172a" }}>
-            Daily Archived Reports (Firestorage Archive)
+            Daily Archived Reports (Storage & Excel Downloads)
           </Title>
           <Text type="secondary" style={{ fontSize: 14, color: "#475569" }}>
-            Automated midnight archives of previous day allocations stored in Firebase Cloud Storage.
+            Midnight historical archives: Target day allocations combined with 2 preceding days in a 3-tab formatted Excel file.
           </Text>
         </div>
 
@@ -465,7 +459,7 @@ export default function DailyArchivedReportsPage() {
           type="warning"
           showIcon
           message={<span>Yesterday's allocations (<b>{yesterdayDate}</b>) have not been archived yet.</span>}
-          description="Click 'Archive Yesterday's Data' above to generate the formatted Excel file and store it in Firebase Storage."
+          description="Click 'Archive Yesterday's Data' to compile the 3-day multi-tab Excel archive and upload to Firebase Storage."
           style={{ marginBottom: 20, borderRadius: 12 }}
           action={
             <Button size="small" type="primary" onClick={handleArchiveYesterday} loading={archiving}>
@@ -475,55 +469,7 @@ export default function DailyArchivedReportsPage() {
         />
       )}
 
-      {/* Metric Cards */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
-        <Col xs={12} sm={6} lg={6}>
-          <Card bordered={false} style={{ borderRadius: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
-            <Statistic
-              title={<span style={{ fontWeight: 600, color: "#64748b" }}>Total Archived Days</span>}
-              value={totalDaysArchived}
-              prefix={<CalendarOutlined style={{ color: "#2563eb", marginRight: 6 }} />}
-              valueStyle={{ fontWeight: 800, color: "#0f172a" }}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={12} sm={6} lg={6}>
-          <Card bordered={false} style={{ borderRadius: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
-            <Statistic
-              title={<span style={{ fontWeight: 600, color: "#059669" }}>Total Archived Meals</span>}
-              value={totalArchivedMeals}
-              prefix={<FileExcelOutlined style={{ color: "#059669", marginRight: 6 }} />}
-              valueStyle={{ fontWeight: 800, color: "#065f46" }}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={12} sm={6} lg={6}>
-          <Card bordered={false} style={{ borderRadius: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
-            <Statistic
-              title={<span style={{ fontWeight: 600, color: "#64748b" }}>Dispensed Portions</span>}
-              value={totalArchivedDispensed}
-              prefix={<CheckCircleOutlined style={{ color: "#10b981", marginRight: 6 }} />}
-              valueStyle={{ fontWeight: 800, color: "#047857" }}
-              suffix={<span style={{ fontSize: 13, color: "#10b981", fontWeight: 700 }}>({overallDispenseRate}%)</span>}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={12} sm={6} lg={6}>
-          <Card bordered={false} style={{ borderRadius: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
-            <Statistic
-              title={<span style={{ fontWeight: 600, color: "#64748b" }}>Automated Schedule</span>}
-              value="12:00 AM Daily"
-              prefix={<ClockCircleOutlined style={{ color: "#7c3aed", marginRight: 6 }} />}
-              valueStyle={{ fontWeight: 800, color: "#4c1d95", fontSize: "1.1rem" }}
-            />
-          </Card>
-        </Col>
-      </Row>
-
-      {/* Search & Filter Bar with From-To Range Picker */}
+      {/* Filter & View Switcher Bar with From-To Range Picker */}
       <Card
         bordered={false}
         style={{
@@ -546,20 +492,39 @@ export default function DailyArchivedReportsPage() {
             />
           </Col>
 
-          <Col xs={24} sm={12} md={10}>
+          <Col xs={24} sm={12} md={8}>
             <Text strong style={{ display: "block", marginBottom: 6, fontSize: 13, color: "#0f172a" }}>
-              Search Archive:
+              Search Archive Date / Name:
             </Text>
             <Input
               prefix={<SearchOutlined style={{ color: "#94a3b8" }} />}
-              placeholder="Search by Date (YYYY-MM-DD) or Filename..."
+              placeholder="Search by Date (YYYY-MM-DD)..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               allowClear
             />
           </Col>
 
-          <Col xs={24} sm={12} md={6} style={{ display: "flex", alignItems: "flex-end" }}>
+          <Col xs={24} sm={12} md={4}>
+            <Text strong style={{ display: "block", marginBottom: 6, fontSize: 13, color: "#0f172a" }}>
+              View Mode:
+            </Text>
+            <Radio.Group
+              value={viewMode}
+              onChange={(e) => setViewMode(e.target.value)}
+              buttonStyle="solid"
+              style={{ width: "100%" }}
+            >
+              <Radio.Button value="cards" style={{ width: "50%", textAlign: "center" }}>
+                <AppstoreOutlined style={{ marginRight: 4 }} /> Cards
+              </Radio.Button>
+              <Radio.Button value="table" style={{ width: "50%", textAlign: "center" }}>
+                <UnorderedListOutlined style={{ marginRight: 4 }} /> Table
+              </Radio.Button>
+            </Radio.Group>
+          </Col>
+
+          <Col xs={24} sm={12} md={4} style={{ display: "flex", alignItems: "flex-end" }}>
             <Button
               onClick={() => {
                 setCustomRange(null);
@@ -573,29 +538,228 @@ export default function DailyArchivedReportsPage() {
         </Row>
       </Card>
 
-      {/* Archives Master Table */}
-      <Card
-        bordered={false}
-        style={{
-          borderRadius: 16,
-          boxShadow: "0 2px 12px rgba(0,0,0,0.04)"
-        }}
-        bodyStyle={{ padding: 0 }}
-      >
-        <Table
-          dataSource={filteredArchives}
-          columns={columns}
-          rowKey="id"
-          loading={loading}
-          scroll={{ x: 1000 }}
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            pageSizeOptions: ["10", "20", "50"],
-            showTotal: (total) => `Total ${total} Daily Archives`
+      {/* VIEW MODE 1: WRAPPED CARDS OVERFLOW DECK VIEW */}
+      {viewMode === "cards" && (
+        <div style={{ marginBottom: 30 }}>
+          {filteredArchives.length === 0 ? (
+            <Card style={{ borderRadius: 16, padding: "40px 0", textAlign: "center" }}>
+              <Empty description="No archived reports found matching your date range." />
+            </Card>
+          ) : (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(330px, 1fr))",
+                gap: "20px",
+                overflowX: "auto",
+                paddingBottom: "8px"
+              }}
+            >
+              {filteredArchives.map((report) => {
+                const isYesterday = report.date === yesterdayDate;
+                const total = report.total_allocations || 0;
+                const dispensed = report.dispensed_count || 0;
+                const pending = report.pending_count || 0;
+                const percent = total > 0 ? Math.round((dispensed / total) * 100) : 0;
+                const isDownloading = downloadingId === report.id;
+
+                return (
+                  <Card
+                    key={report.id}
+                    bordered={false}
+                    hoverable
+                    style={{
+                      borderRadius: 16,
+                      boxShadow: isYesterday
+                        ? "0 8px 24px -4px rgba(124, 58, 237, 0.18), 0 2px 6px rgba(0,0,0,0.04)"
+                        : "0 4px 16px -2px rgba(0,0,0,0.06), 0 2px 4px rgba(0,0,0,0.02)",
+                      border: isYesterday ? "2px solid #c4b5fd" : "1px solid #e2e8f0",
+                      background: "#ffffff",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
+                      transition: "all 0.3s ease",
+                      position: "relative",
+                      overflow: "hidden"
+                    }}
+                    bodyStyle={{ padding: "20px" }}
+                  >
+                    {/* Top Accent Strip */}
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: 5,
+                        background: isYesterday
+                          ? "linear-gradient(90deg, #7c3aed 0%, #a855f7 100%)"
+                          : "linear-gradient(90deg, #059669 0%, #10b981 100%)"
+                      }}
+                    />
+
+                    {/* Card Header */}
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                        <div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <CalendarOutlined style={{ color: isYesterday ? "#7c3aed" : "#059669", fontSize: 16 }} />
+                            <span style={{ fontWeight: 800, fontSize: "1.15rem", color: "#0f172a" }}>
+                              {report.date}
+                            </span>
+                          </div>
+                          {isYesterday && (
+                            <Tag color="purple" style={{ marginTop: 4, fontWeight: 700, fontSize: 11, borderRadius: 6 }}>
+                              ⭐ Yesterday's Archive
+                            </Tag>
+                          )}
+                        </div>
+
+                        <Tag color="cyan" icon={<CloudUploadOutlined />} style={{ fontWeight: 700, borderRadius: 6 }}>
+                          Firebase Cloud Storage
+                        </Tag>
+                      </div>
+
+                      {/* Main Metric Stat */}
+                      <div
+                        style={{
+                          background: "#f8fafc",
+                          borderRadius: 12,
+                          padding: "12px 14px",
+                          marginBottom: 14,
+                          border: "1px solid #f1f5f9"
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>
+                            Daily Meals
+                          </span>
+                          <span style={{ fontSize: 12, fontWeight: 800, color: percent >= 80 ? "#059669" : "#d97706" }}>
+                            {percent}% Dispensed
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                          <span style={{ fontSize: "1.5rem", fontWeight: 900, color: "#0f172a" }}>
+                            {total}
+                          </span>
+                          <span style={{ fontSize: "0.85rem", color: "#64748b" }}>
+                            Portions (<b style={{ color: "#059669" }}>{dispensed} Recv</b> / <b style={{ color: "#2563eb" }}>{pending} Pend</b>)
+                          </span>
+                        </div>
+                        <Progress
+                          percent={percent}
+                          showInfo={false}
+                          strokeColor={{
+                            "0%": "#059669",
+                            "100%": "#10b981"
+                          }}
+                          size="small"
+                          style={{ marginTop: 8 }}
+                        />
+                      </div>
+
+                      {/* Meal Slots Tags */}
+                      <div style={{ marginBottom: 12 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", marginBottom: 4, textTransform: "uppercase" }}>
+                          Meal Slots Breakdown
+                        </div>
+                        <Space size="small" wrap>
+                          <Tag color="orange" style={{ fontWeight: 700 }}>☕ {report.breakfast_count || 0} Breakfast</Tag>
+                          <Tag color="green" style={{ fontWeight: 700 }}>🍲 {report.lunch_count || 0} Lunch</Tag>
+                          <Tag color="purple" style={{ fontWeight: 700 }}>🍽️ {report.dinner_count || 0} Dinner</Tag>
+                        </Space>
+                      </div>
+
+                      {/* Subsidy Plans Tags */}
+                      <div style={{ marginBottom: 14 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", marginBottom: 4, textTransform: "uppercase" }}>
+                          Subsidies
+                        </div>
+                        <Space size="small" wrap>
+                          <Tag color="green" style={{ fontWeight: 700 }}>Full: {report.full_paid_count || 0}</Tag>
+                          <Tag color="gold" style={{ fontWeight: 700 }}>Half: {report.half_paid_count || 0}</Tag>
+                          <Tag color="red" style={{ fontWeight: 700 }}>None: {report.not_paid_count || 0}</Tag>
+                        </Space>
+                      </div>
+
+                      <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 16 }}>
+                        📁 Includes Target Day + 2 Preceding Days Historical Review
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: 14, display: "flex", gap: 10 }}>
+                      <Button
+                        type="primary"
+                        icon={<DownloadOutlined />}
+                        loading={isDownloading}
+                        onClick={() => handleDownload(report)}
+                        style={{
+                          flex: 1,
+                          fontWeight: 700,
+                          background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
+                          borderColor: "#059669",
+                          borderRadius: 8,
+                          height: 38,
+                          boxShadow: "0 2px 8px rgba(5, 150, 105, 0.3)"
+                        }}
+                      >
+                        Download Excel
+                      </Button>
+
+                      <Button
+                        icon={<EyeOutlined />}
+                        onClick={() => handleOpenDetails(report)}
+                        style={{ borderRadius: 8, height: 38, fontWeight: 600 }}
+                      >
+                        View
+                      </Button>
+
+                      <Popconfirm
+                        title="Delete Daily Archive"
+                        description={`Delete archive record for ${report.date}?`}
+                        onConfirm={() => handleDelete(report.date)}
+                        okText="Yes, Delete"
+                        cancelText="No"
+                        okButtonProps={{ danger: true }}
+                      >
+                        <Button danger icon={<DeleteOutlined />} style={{ borderRadius: 8, height: 38 }} />
+                      </Popconfirm>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* VIEW MODE 2: TABLE LIST VIEW */}
+      {viewMode === "table" && (
+        <Card
+          bordered={false}
+          style={{
+            borderRadius: 16,
+            boxShadow: "0 2px 12px rgba(0,0,0,0.04)",
+            marginBottom: 30
           }}
-        />
-      </Card>
+          bodyStyle={{ padding: 0 }}
+        >
+          <Table
+            dataSource={filteredArchives}
+            columns={columns}
+            rowKey="id"
+            loading={loading}
+            scroll={{ x: 1000 }}
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: true,
+              pageSizeOptions: ["10", "20", "50"],
+              showTotal: (total) => `Total ${total} Daily Archives`
+            }}
+          />
+        </Card>
+      )}
 
       {/* Modal for Archiving Custom Date */}
       <Modal
@@ -608,13 +772,13 @@ export default function DailyArchivedReportsPage() {
         open={customModalOpen}
         onOk={handleArchiveCustomDate}
         onCancel={() => setCustomModalOpen(false)}
-        okText="Archive & Upload to Storage"
+        okText="Archive & Save to Storage"
         confirmLoading={archiving}
         destroyOnClose
       >
         <div style={{ marginTop: 16 }}>
           <Paragraph type="secondary" style={{ color: "#475569" }}>
-            Select any date to compile previous allocations, create the formatted Excel sheet, and upload to Firebase Storage:
+            Select any date to compile allocations, generate the 3-day multi-tab Excel sheet, and archive to Firebase Storage:
           </Paragraph>
           <div style={{ fontWeight: 600, marginBottom: 8, color: "#0f172a" }}>Target Date:</div>
           <DatePicker
@@ -625,7 +789,7 @@ export default function DailyArchivedReportsPage() {
         </div>
       </Modal>
 
-      {/* Drawer for Viewing Detailed Allocations for an Archive */}
+      {/* Drawer for Viewing Detailed Allocations */}
       <Drawer
         title={
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>

@@ -9,7 +9,6 @@ import AnalyticsDashboard from "../pages/admin/AnalyticsDashboard";
 import ReportsPage from "../pages/admin/ReportsPage";
 import DailyArchivedReportsPage from "../pages/admin/DailyArchivedReportsPage";
 import AllAllocationsPage from "../pages/admin/AllAllocationsPage";
-import AllocationsEditPage from "../pages/admin/AllocationsEditPage";
 import EmployeesPage from "../pages/admin/EmployeesPage";
 import SettingsPage from "../pages/admin/SettingsPage";
 
@@ -55,13 +54,7 @@ export default function AppRoutes() {
 
       <Route
         path="/admin/allocations-edit"
-        element={
-          <ProtectedRoute adminOnly>
-            <AppLayout>
-              <AllocationsEditPage />
-            </AppLayout>
-          </ProtectedRoute>
-        }
+        element={<Navigate to="/admin/reports" replace />}
       />
 
       <Route
@@ -99,6 +92,17 @@ export default function AppRoutes() {
 
       <Route
         path="/admin/all-allocations"
+        element={
+          <ProtectedRoute adminOnly>
+            <AppLayout>
+              <AllAllocationsPage />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/previous-allocations"
         element={
           <ProtectedRoute adminOnly>
             <AppLayout>

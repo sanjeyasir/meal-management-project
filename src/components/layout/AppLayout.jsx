@@ -70,19 +70,19 @@ export default function AppLayout({ children }) {
       label: "Visualisation Dashboard",
     },
     {
-      key: "/admin/allocations-edit",
-      icon: <EditOutlined style={{ fontSize: 18 }} />,
-      label: "Allocations Edit",
-    },
-    {
       key: "/admin/reports",
       icon: <FileExcelOutlined style={{ fontSize: 18 }} />,
-      label: "Formatted Excel Reports",
+      label: "Today's Allocations & Reports",
     },
     {
       key: "/admin/all-allocations",
       icon: <TableOutlined style={{ fontSize: 18 }} />,
-      label: "All Allocations Master",
+      label: "Previous Day Allocations",
+    },
+    {
+      key: "/admin/daily-archive",
+      icon: <CloudUploadOutlined style={{ fontSize: 18, color: "#059669" }} />,
+      label: "Daily Archived Reports",
     },
     {
       key: "/admin/employees",
@@ -93,11 +93,6 @@ export default function AppLayout({ children }) {
       key: "/admin/settings",
       icon: <SettingOutlined style={{ fontSize: 18 }} />,
       label: "Settings & Master Data",
-    },
-    {
-      key: "/admin/daily-archive",
-      icon: <CloudUploadOutlined style={{ fontSize: 18, color: "#059669" }} />,
-      label: "Daily Archived Reports",
     }
   ];
 

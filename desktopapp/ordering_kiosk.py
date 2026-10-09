@@ -475,14 +475,94 @@ class OrderingKioskApp(ctk.CTk):
         # Right Panel: Terminal
         self._build_right_terminal(col_grid)
 
-    def _start_spinner(self, message):
+    def _start_spinner(self, title_msg, subtitle_msg=""):
         def _do_start():
             self.is_spinning = True
-            self.spinner_msg = message
+            self.spinner_msg = title_msg
+            self.spinner_submsg = subtitle_msg
             self.spinner_idx = 0
-            if hasattr(self, "loading_bar") and self.loading_bar.winfo_exists():
-                self.loading_bar.pack(fill="x", padx=16, pady=(2, 4), before=self.standby_status)
-                self.loading_bar.start()
+            self.spinner_start_time = time.time()
+
+            if hasattr(self, "pin_entry") and self.pin_entry.winfo_exists():
+                try:
+                    self.pin_entry.configure(state="disabled")
+                except Exception:
+                    pass
+
+            if hasattr(self, "login_btn") and self.login_btn.winfo_exists():
+                try:
+                    self.login_btn.configure(
+                        text="⏳ VERIFYING... PLEASE WAIT  (හඳුනාගනිමින් පවතී...)",
+                        state="disabled",
+                        fg_color="#1e3a8a",
+                    )
+                except Exception:
+                    pass
+
+            # Create prominent Centered Modal Loading Card on main_container
+            if not hasattr(self, "loading_overlay") or not self.loading_overlay.winfo_exists():
+                self.loading_overlay = ctk.CTkFrame(
+                    self.main_container,
+                    fg_color="#070d19",
+                    corner_radius=22,
+                    border_width=2,
+                    border_color="#38BDF8",
+                )
+
+                self.overlay_spinner_glyph = ctk.CTkLabel(
+                    self.loading_overlay,
+                    text="⏳",
+                    font=(FONT_FAMILY, 52),
+                    text_color="#38BDF8",
+                )
+                self.overlay_spinner_glyph.pack(pady=(28, 6))
+
+                self.overlay_title_label = ctk.CTkLabel(
+                    self.loading_overlay,
+                    text=title_msg,
+                    font=(FONT_FAMILY, 21, "bold"),
+                    text_color="#60A5FA",
+                    wraplength=640,
+                )
+                self.overlay_title_label.pack(pady=(0, 6), padx=20)
+
+                self.overlay_sub_label = ctk.CTkLabel(
+                    self.loading_overlay,
+                    text=subtitle_msg or "කරුණාකර රැඳී සිටින්න • தயவுசெய்து காத்திருக்கவும்",
+                    font=(FONT_FAMILY, 14, "bold"),
+                    text_color="#94A3B8",
+                    wraplength=640,
+                )
+                self.overlay_sub_label.pack(pady=(0, 16), padx=20)
+
+                self.overlay_progress_bar = ctk.CTkProgressBar(
+                    self.loading_overlay,
+                    mode="indeterminate",
+                    height=10,
+                    corner_radius=5,
+                    fg_color="#0F172A",
+                    progress_color="#38BDF8",
+                    width=520,
+                )
+                self.overlay_progress_bar.pack(pady=(0, 20), padx=30)
+
+                self.overlay_footer_label = ctk.CTkLabel(
+                    self.loading_overlay,
+                    text="🔒 Secure Biometric Authentication • Hayleys Eco Solutions",
+                    font=(FONT_FAMILY, 11, "bold"),
+                    text_color="#475569",
+                )
+                self.overlay_footer_label.pack(pady=(0, 18))
+
+            self.loading_overlay.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.82, relheight=0.64)
+            self.loading_overlay.lift()
+
+            if hasattr(self, "overlay_progress_bar") and self.overlay_progress_bar.winfo_exists():
+                try:
+                    self.overlay_progress_bar.start()
+                except Exception:
+                    pass
+
             self._animate_spinner()
         self.after(0, _do_start)
 
@@ -490,33 +570,84 @@ class OrderingKioskApp(ctk.CTk):
         if not getattr(self, "is_spinning", False):
             return
         frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+        icons = ["⏳", "🔄", "⚡", "✨", "⏳", "🔄", "⚡", "✨"]
         char = frames[self.spinner_idx % len(frames)]
+        icon = icons[(self.spinner_idx // 2) % len(icons)]
         self.spinner_idx += 1
-        if hasattr(self, "standby_status") and self.standby_status.winfo_exists():
-            self.standby_status.configure(
-                text=f"{char}  {self.spinner_msg}",
-                text_color="#60A5FA",
-            )
-        self.after(80, self._animate_spinner)
 
-    def _update_spinner_msg(self, message):
+        disp_title = f"{char}  {self.spinner_msg}"
+        if hasattr(self, "overlay_spinner_glyph") and self.overlay_spinner_glyph.winfo_exists():
+            try:
+                self.overlay_spinner_glyph.configure(text=icon)
+            except Exception:
+                pass
+
+        if hasattr(self, "overlay_title_label") and self.overlay_title_label.winfo_exists():
+            try:
+                self.overlay_title_label.configure(text=disp_title)
+            except Exception:
+                pass
+
+        if hasattr(self, "standby_status") and self.standby_status.winfo_exists():
+            try:
+                self.standby_status.configure(
+                    text=disp_title,
+                    text_color="#60A5FA",
+                )
+            except Exception:
+                pass
+        self.after(60, self._animate_spinner)
+
+    def _update_spinner_msg(self, title_msg, subtitle_msg=None):
         def _do_upd():
-            self.spinner_msg = message
+            self.spinner_msg = title_msg
+            if subtitle_msg is not None:
+                self.spinner_submsg = subtitle_msg
+                if hasattr(self, "overlay_sub_label") and self.overlay_sub_label.winfo_exists():
+                    try:
+                        self.overlay_sub_label.configure(text=subtitle_msg)
+                    except Exception:
+                        pass
+            if hasattr(self, "overlay_title_label") and self.overlay_title_label.winfo_exists():
+                try:
+                    self.overlay_title_label.configure(text=title_msg)
+                except Exception:
+                    pass
         self.after(0, _do_upd)
 
     def _stop_spinner(self):
         def _do_stop():
             self.is_spinning = False
-            if hasattr(self, "loading_bar") and self.loading_bar.winfo_exists():
+            if hasattr(self, "loading_overlay") and self.loading_overlay.winfo_exists():
                 try:
-                    self.loading_bar.stop()
-                    self.loading_bar.pack_forget()
+                    if hasattr(self, "overlay_progress_bar") and self.overlay_progress_bar.winfo_exists():
+                        self.overlay_progress_bar.stop()
+                    self.loading_overlay.place_forget()
+                    self.loading_overlay.destroy()
+                except Exception:
+                    pass
+
+            if hasattr(self, "pin_entry") and self.pin_entry.winfo_exists():
+                try:
+                    self.pin_entry.configure(state="normal")
+                except Exception:
+                    pass
+
+            if hasattr(self, "login_btn") and self.login_btn.winfo_exists():
+                try:
+                    self.login_btn.configure(
+                        text="ENTER ORDERING PORTAL  ➔",
+                        state="normal",
+                        fg_color=COLORS["btn_primary"],
+                    )
                 except Exception:
                     pass
         self.after(0, _do_stop)
 
     def _on_keypad_press(self, key_action):
         """Handle on-screen touch keypad inputs"""
+        if getattr(self, "is_spinning", False):
+            return
         if not hasattr(self, "pin_entry"):
             return
         curr = self.pin_entry.get()
@@ -677,6 +808,8 @@ class OrderingKioskApp(ctk.CTk):
         threading.Thread(target=post_task, daemon=True).start()
 
     def _manual_login(self):
+        if getattr(self, "is_spinning", False):
+            return
         pin = self.pin_entry.get().strip() if hasattr(self, "pin_entry") else ""
         if pin:
             now_str = datetime.datetime.now().strftime("%H:%M:%S")
@@ -687,12 +820,21 @@ class OrderingKioskApp(ctk.CTk):
     # EMPLOYEE VERIFICATION (Fast Cache Hit & Animated Spinner Feedback)
     # -------------------------------------------------------------
     def _handle_employee_login(self, pin):
+        if getattr(self, "is_spinning", False):
+            return
+        pin = str(pin).strip()
+        if not pin:
+            return
+
         now_str = datetime.datetime.now().strftime("%H:%M:%S")
         self._append_log(f"[{now_str}] 🔍 Verifying Employee '{pin}'...")
         if hasattr(self, "login_btn") and self.login_btn.winfo_exists():
             self.login_btn.configure(state="disabled")
 
-        self._start_spinner(f"Verifying Employee {pin}...  |  හඳුනාගනිමින් පවතී...")
+        self._start_spinner(
+            f"Verifying Employee {pin}...",
+            "සේවකයා හඳුනාගනිමින් පවතී... • சரிபார்க்கிறது..."
+        )
 
         def on_verified(ok, res):
             t_now = datetime.datetime.now().strftime("%H:%M:%S")
@@ -710,10 +852,27 @@ class OrderingKioskApp(ctk.CTk):
 
                 cached_tag = " (Local Cache Hit ⚡)" if res.get("cached") else ""
                 self._append_log(f"[{t_now}] ✅ [AUTH SUCCESS]{cached_tag} Employee Verified: {emp_name} (ID: {emp_id})")
-                self._update_spinner_msg(f"✅ Verified: {emp_name} • Opening ordering portal...")
-                play_success_beep()
-                self._stop_spinner()
-                self.after(0, lambda: self.show_ordering_screen(emp))
+                self._update_spinner_msg(
+                    f"✅ Verified: {emp_name} (ID: {emp_id})",
+                    "📋 Loading meal bookings & portal... • ආහාර තොරතුරු ලබාගනිමින් පවතී..."
+                )
+
+                # Fetch upcoming meal bookings asynchronously while maintaining the spinner
+                def on_orders_ready(ok_alloc, alloc_res):
+                    allocs = alloc_res.get("data", []) if ok_alloc else []
+                    play_success_beep()
+
+                    # Guarantee at least 450ms spinner display on fast cache hits
+                    elapsed = time.time() - getattr(self, "spinner_start_time", 0)
+                    delay_ms = int(max(0, (0.45 - elapsed) * 1000))
+
+                    def proceed_to_order():
+                        self._stop_spinner()
+                        self.show_ordering_screen(emp, upcoming_allocations=allocs)
+
+                    self.after(delay_ms, proceed_to_order)
+
+                self.api.get_employee_orders_async(emp_id, days=7, callback=on_orders_ready)
             else:
                 play_error_beep()
                 self._stop_spinner()
@@ -1035,8 +1194,21 @@ class OrderingKioskApp(ctk.CTk):
         self.alloc_scroll = ctk.CTkScrollableFrame(right_col, fg_color="transparent", height=260)
         self.alloc_scroll.pack(fill="both", expand=True, padx=12, pady=(0, 6))
 
-        # Show initial animated loading state inside allocations list
-        self._render_upcoming_allocations_loading()
+        # If upcoming allocations were preloaded during the modal spinner, render them immediately
+        if self.upcoming_allocations:
+            self._render_upcoming_allocations_list()
+            cnt = len(self.upcoming_allocations)
+            badge_txt = f"● {cnt} Booked" if cnt > 0 else "● No Bookings"
+            badge_col = "#10B981" if cnt > 0 else COLORS["text_muted"]
+            self.alloc_status_badge.configure(text=badge_txt, text_color=badge_col)
+        else:
+            # Show initial animated loading state inside allocations list
+            self._render_upcoming_allocations_loading()
+            self._fetch_upcoming_allocations(emp_id)
+
+        # Check existing allocations for selected range
+        self._check_existing_allocations_for_range()
+        self._update_order_calculation()
 
         # Logout / Exit Button with Live Countdown
         self.logout_btn = ctk.CTkButton(
@@ -1050,11 +1222,6 @@ class OrderingKioskApp(ctk.CTk):
             command=self.show_standby_screen,
         )
         self.logout_btn.pack(fill="x", padx=12, pady=(0, 10))
-
-        # Check existing allocations and fetch upcoming bookings asynchronously
-        self._check_existing_allocations_for_range()
-        self._fetch_upcoming_allocations(emp_id)
-        self._update_order_calculation()
 
         # Run countdown
         self._run_countdown()

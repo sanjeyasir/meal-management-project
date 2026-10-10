@@ -105,9 +105,11 @@ exports.iclock = onRequest(
 );
 
 /**
- * Automated Daily Midnight Archive Function (12:00 AM Sri Lanka Time)
- * Compiles the previous day's allocations only, generates formatted Excel (.xlsx),
- * uploads to Firebase Storage under daily_archive_reports/, and records metadata in Firestore.
+ * 1. Automated Daily Midnight Move & Archive Function (12:00 AM Sri Lanka Time)
+ * - Moves previous day's complete allocations from live 'meal_allocations' to 'archived_meal_allocations'
+ * - Generates formatted 3-day multi-tab Excel (.xlsx) report
+ * - Uploads to Firebase Storage under daily_archive_reports/
+ * - Records metadata summary in Firestore under 'daily_archived_reports'
  */
 exports.archiveDailyAllocations = onSchedule(
   {
@@ -116,12 +118,35 @@ exports.archiveDailyAllocations = onSchedule(
     region: "us-central1"
   },
   async (event) => {
-    console.log("[Cloud Scheduler] Running daily 12:00 AM allocations archive...");
+    console.log("[Cloud Scheduler - 12:00 AM] Running daily allocations move & archive...");
     try {
       const result = await reportsModule.archiveDailyAllocations(null, "Cloud Scheduler (12:00 AM)");
-      console.log(`[Cloud Scheduler] Daily archive successfully completed for date: ${result.date}`, result);
+      console.log(`[Cloud Scheduler - 12:00 AM] Daily archive successfully completed for date: ${result.date}`, result);
     } catch (err) {
-      console.error("[Cloud Scheduler Error] Failed running daily allocations archive:", err);
+      console.error("[Cloud Scheduler - 12:00 AM Error] Failed running daily allocations archive:", err);
+    }
+  }
+);
+
+/**
+ * 2. Automated Daily 1:00 AM Cleanup Function (1:00 AM Sri Lanka Time)
+ * - Runs 1 hour after the midnight archive
+ * - Purges 2+ days old allocation records from 'archived_meal_allocations'
+ * - Keeps Firestore lean and minimal while permanent Excel (.xlsx) files remain safely in Firebase Storage
+ */
+exports.cleanupArchivedAllocations = onSchedule(
+  {
+    schedule: "0 1 * * *", // Every day at 1:00 AM
+    timeZone: "Asia/Colombo",
+    region: "us-central1"
+  },
+  async (event) => {
+    console.log("[Cloud Scheduler - 1:00 AM] Running daily cleanup of 2+ days old archived allocations...");
+    try {
+      const result = await reportsModule.cleanupOldArchivedAllocations(2, "Cloud Scheduler (1:00 AM)");
+      console.log(`[Cloud Scheduler - 1:00 AM] Daily cleanup completed:`, result);
+    } catch (err) {
+      console.error("[Cloud Scheduler - 1:00 AM Error] Failed running archived allocations cleanup:", err);
     }
   }
 );

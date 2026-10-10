@@ -3,8 +3,24 @@ const { db, storage } = require("../config/firebaseAdmin.js");
 
 const router = Router();
 const MEAL_COLLECTION = "meal_allocations";
+const ARCHIVED_MEALS_COLLECTION = "archived_meal_allocations";
 const ARCHIVE_COLLECTION = "daily_archived_reports";
 const STORAGE_FOLDER = "daily_archive_reports";
+
+/**
+ * Helper to fetch allocations for a given date across both active and archived collections
+ */
+async function getAllocationsForDate(dateKey) {
+  if (!dateKey) return [];
+  const [activeSnap, archivedSnap] = await Promise.all([
+    db.collection(MEAL_COLLECTION).where("date", "==", dateKey).get(),
+    db.collection(ARCHIVED_MEALS_COLLECTION).where("date", "==", dateKey).get()
+  ]);
+  const map = new Map();
+  archivedSnap.forEach(doc => map.set(doc.id, { id: doc.id, ...doc.data() }));
+  activeSnap.forEach(doc => map.set(doc.id, { id: doc.id, ...doc.data() }));
+  return Array.from(map.values());
+}
 
 function formatDateKey(d) {
   if (!d) return "";
@@ -194,9 +210,9 @@ async function archiveDailyAllocations(targetDate = null, triggeredBy = "Automat
   const storagePath = `${STORAGE_FOLDER}/${filename}`;
 
   // ----------------------------------------------------
-  // STEP 1: ARCHIVE THE TARGET DAY'S DATA TO THE LIST FIRST
+  // STEP 1: MOVE TARGET DAY'S DATA FROM LIVE MEAL_COLLECTION TO ARCHIVED_MEALS_COLLECTION
   // ----------------------------------------------------
-  const [snapshot, catSnap] = await Promise.all([
+  const [activeSnap, catSnap] = await Promise.all([
     db.collection(MEAL_COLLECTION).where("date", "==", dateKey).get(),
     db.collection("employee_categories").get()
   ]);
@@ -215,8 +231,41 @@ async function archiveDailyAllocations(targetDate = null, triggeredBy = "Automat
     return normalizePaymentType(masterSubsidy);
   };
 
-  const targetAllocations = [];
-  snapshot.forEach(doc => targetAllocations.push({ id: doc.id, ...doc.data() }));
+  // Perform atomic batch move: copy into ARCHIVED_MEALS_COLLECTION and delete from MEAL_COLLECTION
+  let movedCount = 0;
+  if (!activeSnap.empty) {
+    const batchSize = 400;
+    let batch = db.batch();
+    let opCount = 0;
+
+    for (const docSnap of activeSnap.docs) {
+      const data = docSnap.data();
+      const archiveRef = db.collection(ARCHIVED_MEALS_COLLECTION).doc(docSnap.id);
+
+      batch.set(archiveRef, {
+        ...data,
+        archived_to_list_at: new Date().toISOString(),
+        archived_by: triggeredBy
+      }, { merge: true });
+
+      batch.delete(docSnap.ref);
+      opCount += 2;
+      movedCount++;
+
+      if (opCount >= batchSize) {
+        await batch.commit();
+        batch = db.batch();
+        opCount = 0;
+      }
+    }
+
+    if (opCount > 0) {
+      await batch.commit();
+    }
+  }
+
+  // Retrieve complete target allocations from the archived list
+  const targetAllocations = await getAllocationsForDate(dateKey);
 
   const totalAllocations = targetAllocations.length;
   let dispensedCount = 0;
@@ -252,8 +301,10 @@ async function archiveDailyAllocations(targetDate = null, triggeredBy = "Automat
     display_label: `Daily Archive - ${dateKey}`,
     filename,
     storage_path: storagePath,
+    storagePath,
     download_url: "",
     total_allocations: totalAllocations,
+    moved_count: movedCount,
     dispensed_count: dispensedCount,
     pending_count: pendingCount,
     breakfast_count: breakfastCount,
@@ -270,20 +321,14 @@ async function archiveDailyAllocations(targetDate = null, triggeredBy = "Automat
   await db.collection(ARCHIVE_COLLECTION).doc(dateKey).set(reportMetadata, { merge: true });
 
   // ----------------------------------------------------
-  // STEP 2: IN THE SAME FLOW, TAKE THE 2 PREVIOUS DAYS MEALS IF PRESENT
+  // STEP 2: IN THE SAME FLOW, TAKE THE 2 PREVIOUS DAYS MEALS FROM ARCHIVE LIST
   // ----------------------------------------------------
   const [prevDay1, prevDay2] = getPreviousDaysKeys(dateKey, 2);
 
-  const [snap1, snap2] = await Promise.all([
-    db.collection(MEAL_COLLECTION).where("date", "==", prevDay1).get(),
-    db.collection(MEAL_COLLECTION).where("date", "==", prevDay2).get()
+  const [prevAllocs1, prevAllocs2] = await Promise.all([
+    getAllocationsForDate(prevDay1),
+    getAllocationsForDate(prevDay2)
   ]);
-
-  const prevAllocs1 = [];
-  snap1.forEach(doc => prevAllocs1.push({ id: doc.id, ...doc.data() }));
-
-  const prevAllocs2 = [];
-  snap2.forEach(doc => prevAllocs2.push({ id: doc.id, ...doc.data() }));
 
   const historicalAllocations = [...prevAllocs1, ...prevAllocs2];
   const allAllocations = [...targetAllocations, ...historicalAllocations];
@@ -471,6 +516,69 @@ async function archiveDailyAllocations(targetDate = null, triggeredBy = "Automat
   return reportMetadata;
 }
 
+/**
+ * Daily 1:00 AM Cleanup Engine:
+ * Purges allocations older than retention threshold (2+ days old) from the archived list.
+ * Note: Generated Excel files remain permanently preserved in Firebase Storage.
+ */
+async function cleanupOldArchivedAllocations(retentionDays = 2, triggeredBy = "Cloud Scheduler (1:00 AM)") {
+  const now = new Date();
+  const slNow = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Colombo" }));
+  const cutoff = new Date(slNow);
+  cutoff.setDate(cutoff.getDate() - Number(retentionDays));
+  const cutoffDateStr = formatDateKey(cutoff);
+
+  console.log(`[Archive Cleanup - ${triggeredBy}] Scanning ${ARCHIVED_MEALS_COLLECTION} for records on or before ${cutoffDateStr}...`);
+
+  const snapshot = await db.collection(ARCHIVED_MEALS_COLLECTION)
+    .where("date", "<=", cutoffDateStr)
+    .get();
+
+  if (snapshot.empty) {
+    console.log(`[Archive Cleanup] No records found on or before ${cutoffDateStr}. Nothing to delete.`);
+    return {
+      success: true,
+      deletedCount: 0,
+      cutoffDate: cutoffDateStr,
+      retentionDays: Number(retentionDays),
+      triggeredBy,
+      message: `No archived records found older than or equal to ${cutoffDateStr}.`
+    };
+  }
+
+  const batchSize = 400;
+  let batch = db.batch();
+  let count = 0;
+  let deletedCount = 0;
+
+  for (const docSnap of snapshot.docs) {
+    batch.delete(docSnap.ref);
+    count++;
+    deletedCount++;
+
+    if (count >= batchSize) {
+      await batch.commit();
+      batch = db.batch();
+      count = 0;
+    }
+  }
+
+  if (count > 0) {
+    await batch.commit();
+  }
+
+  console.log(`[Archive Cleanup] Successfully deleted ${deletedCount} records (<= ${cutoffDateStr}) from ${ARCHIVED_MEALS_COLLECTION}.`);
+
+  return {
+    success: true,
+    deletedCount,
+    cutoffDate: cutoffDateStr,
+    retentionDays: Number(retentionDays),
+    triggeredBy,
+    message: `Successfully deleted ${deletedCount} archived allocations on or before ${cutoffDateStr}.`
+  };
+}
+
 // 1. Summary
 router.get("/summary", async (req, res) => {
   try {
@@ -589,11 +697,11 @@ router.get("/download-excel", async (req, res) => {
     const targetDate = req.query?.date ? formatDateKey(req.query.date) : getYesterdaySriLankaDate();
     const [prevDay1, prevDay2] = getPreviousDaysKeys(targetDate, 2);
 
-    const [snapshot, catSnap, snap1, snap2] = await Promise.all([
-      db.collection(MEAL_COLLECTION).where("date", "==", targetDate).get(),
+    const [targetAllocations, catSnap, prevAllocs1, prevAllocs2] = await Promise.all([
+      getAllocationsForDate(targetDate),
       db.collection("employee_categories").get(),
-      db.collection(MEAL_COLLECTION).where("date", "==", prevDay1).get(),
-      db.collection(MEAL_COLLECTION).where("date", "==", prevDay2).get()
+      getAllocationsForDate(prevDay1),
+      getAllocationsForDate(prevDay2)
     ]);
 
     const catMap = {};
@@ -603,21 +711,6 @@ router.get("/download-excel", async (req, res) => {
         catMap[data.category_name.toLowerCase()] = data.configuration_detail;
       }
     });
-
-    const getAutoSubsidy = (item) => {
-      const cat = (item.category_name || item.category_employment || item.employee_category || "Staff").trim();
-      const masterSubsidy = catMap[cat.toLowerCase()] || item.pay_category || item.configuration_detail;
-      return normalizePaymentType(masterSubsidy);
-    };
-
-    const targetAllocations = [];
-    snapshot.forEach(doc => targetAllocations.push({ id: doc.id, ...doc.data() }));
-
-    const prevAllocs1 = [];
-    snap1.forEach(doc => prevAllocs1.push({ id: doc.id, ...doc.data() }));
-
-    const prevAllocs2 = [];
-    snap2.forEach(doc => prevAllocs2.push({ id: doc.id, ...doc.data() }));
 
     const allAllocations = [...targetAllocations, ...prevAllocs1, ...prevAllocs2];
     const nowSL = formatSriLankaDateTime(new Date());
@@ -662,7 +755,40 @@ router.get("/download-excel", async (req, res) => {
   }
 });
 
+// 5. Trigger / Run Cleanup of Old Archived Allocations (2+ Days Old)
+router.post("/cleanup-archived", async (req, res) => {
+  try {
+    const retentionDays = req.body?.retentionDays !== undefined ? req.body.retentionDays : 2;
+    const triggeredBy = req.body?.triggeredBy || "Admin API Trigger";
+    const result = await cleanupOldArchivedAllocations(retentionDays, triggeredBy);
+    return res.json({
+      success: true,
+      message: result.message,
+      cleanup: result
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get("/cleanup-archived", async (req, res) => {
+  try {
+    const retentionDays = req.query?.retentionDays !== undefined ? req.query.retentionDays : 2;
+    const result = await cleanupOldArchivedAllocations(retentionDays, "Manual Trigger (GET)");
+    return res.json({
+      success: true,
+      message: result.message,
+      cleanup: result
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 module.exports = {
   router,
-  archiveDailyAllocations
+  archiveDailyAllocations,
+  cleanupOldArchivedAllocations,
+  getAllocationsForDate,
+  ARCHIVED_MEALS_COLLECTION
 };

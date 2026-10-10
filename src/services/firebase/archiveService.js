@@ -1,6 +1,6 @@
 import { collection, doc, getDoc, getDocs, setDoc, deleteDoc } from "firebase/firestore";
 import { db } from "./config";
-import { getMealAllocations, formatDateKey } from "./mealService";
+import { getMealAllocations, getMealAllocationsWithArchived, formatDateKey } from "./mealService";
 import { buildMealReportWorkbook } from "../../utils/excelReportGenerator";
 import { normalizePaymentType, getCategories } from "./categoryService";
 import { getSriLankaNowFormatted } from "../../utils/timeUtils";
@@ -105,7 +105,7 @@ export async function archiveDailyAllocationsForDate(targetDateStr = null, trigg
     // ----------------------------------------------------
     // STEP 1: ARCHIVE THE TARGET DAY'S DATA TO THE LIST FIRST
     // ----------------------------------------------------
-    const targetAllocations = await getMealAllocations({ date: dateKey });
+    const targetAllocations = await getMealAllocationsWithArchived({ date: dateKey });
 
     const totalAllocations = targetAllocations.length;
     const dispensedCount = targetAllocations.filter(
@@ -171,8 +171,8 @@ export async function archiveDailyAllocationsForDate(targetDateStr = null, trigg
     const [prevDay1, prevDay2] = getPreviousDaysKeys(dateKey, 2);
     
     const [prevAllocs1, prevAllocs2] = await Promise.all([
-      getMealAllocations({ date: prevDay1 }),
-      getMealAllocations({ date: prevDay2 })
+      getMealAllocationsWithArchived({ date: prevDay1 }),
+      getMealAllocationsWithArchived({ date: prevDay2 })
     ]);
 
     const historicalAllocations = [...prevAllocs1, ...prevAllocs2];
@@ -247,9 +247,9 @@ export async function downloadArchivedReport(report) {
     const [prevDay1, prevDay2] = getPreviousDaysKeys(dateKey, 2);
 
     const [targetAllocations, prevAllocs1, prevAllocs2, cats] = await Promise.all([
-      getMealAllocations({ date: dateKey }),
-      getMealAllocations({ date: prevDay1 }),
-      getMealAllocations({ date: prevDay2 }),
+      getMealAllocationsWithArchived({ date: dateKey }),
+      getMealAllocationsWithArchived({ date: prevDay1 }),
+      getMealAllocationsWithArchived({ date: prevDay2 }),
       getCategories().catch(() => [])
     ]);
 
@@ -307,6 +307,27 @@ export async function deleteArchivedReport(dateStr) {
     return { success: true };
   } catch (error) {
     console.error("Error deleting archived report:", error);
+    throw error;
+  }
+}
+
+/**
+ * Trigger cleanup of 2+ days old archived allocations on Cloud Functions server (1:00 AM job manual trigger)
+ */
+export async function triggerArchivedCleanup(retentionDays = 2, triggeredBy = "Admin Console Cleanup") {
+  try {
+    const resp = await fetch(`${API_BASE_URL}/reports/cleanup-archived`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ retentionDays, triggeredBy })
+    });
+    if (!resp.ok) {
+      throw new Error(`Server returned status HTTP ${resp.status}`);
+    }
+    const data = await resp.json();
+    return data;
+  } catch (error) {
+    console.error("Error triggering cleanup of archived allocations:", error);
     throw error;
   }
 }

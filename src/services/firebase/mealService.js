@@ -167,6 +167,69 @@ export async function getMealAllocations(filters = {}) {
 }
 
 /**
+ * Fetch allocations from the archived list ('archived_meal_allocations')
+ */
+export async function getArchivedMealAllocations(filters = {}) {
+  try {
+    let q = collection(db, "archived_meal_allocations");
+    const constraints = [];
+
+    if (filters.employee_id) {
+      constraints.push(where("employee_id", "==", String(filters.employee_id)));
+    }
+    if (filters.date) {
+      constraints.push(where("date", "==", formatDateKey(filters.date)));
+    }
+    if (filters.status) {
+      constraints.push(where("status", "==", filters.status));
+    }
+    if (filters.pay_category) {
+      constraints.push(where("pay_category", "==", filters.pay_category));
+    }
+    if (filters.meal_type) {
+      constraints.push(where("meal_type", "==", filters.meal_type));
+    }
+
+    const finalQuery = constraints.length > 0 ? query(q, ...constraints) : q;
+    const snapshot = await getDocs(finalQuery);
+    
+    const allocations = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    let filtered = allocations;
+    if (filters.fromDate && filters.toDate) {
+      const fromStr = formatDateKey(filters.fromDate);
+      const toStr = formatDateKey(filters.toDate);
+      filtered = filtered.filter(a => a.date >= fromStr && a.date <= toStr);
+    }
+
+    return filtered.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  } catch (error) {
+    console.error("Error getting archived meal allocations:", error);
+    return [];
+  }
+}
+
+/**
+ * Fetch allocations across BOTH active 'meal_allocations' and 'archived_meal_allocations'
+ */
+export async function getMealAllocationsWithArchived(filters = {}) {
+  try {
+    const [liveList, archivedList] = await Promise.all([
+      getMealAllocations(filters),
+      getArchivedMealAllocations(filters)
+    ]);
+    const map = new Map();
+    archivedList.forEach(item => map.set(item.id, item));
+    liveList.forEach(item => map.set(item.id, item));
+    const combined = Array.from(map.values());
+    return combined.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  } catch (error) {
+    console.error("Error getting combined allocations:", error);
+    return [];
+  }
+}
+
+/**
  * Update an existing meal allocation.
  * STRICT RULE: Only allocations with status 'Ordered' can be edited.
  * Allocations with status 'Recieved' / 'Received' are permanently locked.

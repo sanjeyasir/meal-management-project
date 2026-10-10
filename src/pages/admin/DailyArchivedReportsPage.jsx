@@ -45,9 +45,10 @@ import {
   archiveDailyAllocationsForDate,
   downloadArchivedReport,
   deleteArchivedReport,
+  triggerArchivedCleanup,
   getYesterdayDateKey
 } from "../../services/firebase/archiveService";
-import { getMealAllocations, formatDateKey } from "../../services/firebase/mealService";
+import { getMealAllocationsWithArchived, formatDateKey } from "../../services/firebase/mealService";
 import { formatSriLankaDateTime, formatSriLankaDate } from "../../utils/timeUtils";
 
 const { Title, Text, Paragraph } = Typography;
@@ -57,6 +58,7 @@ export default function DailyArchivedReportsPage() {
   const [archivedReports, setArchivedReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [archiving, setArchiving] = useState(false);
+  const [cleaningUp, setCleaningUp] = useState(false);
   const [downloadingId, setDownloadingId] = useState(null);
   const [viewMode, setViewMode] = useState("cards"); // "cards" | "table"
 
@@ -105,6 +107,25 @@ export default function DailyArchivedReportsPage() {
       message.error({ content: `Archive failed: ${err.message}`, key: "archiving" });
     } finally {
       setArchiving(false);
+    }
+  };
+
+  // Manual Trigger: 1:00 AM Cleanup Job (Prunes 2+ days old allocations from archive list)
+  const handleRunCleanup = async () => {
+    setCleaningUp(true);
+    try {
+      message.loading({ content: "Scanning and pruning 2+ days old archived records (1:00 AM Job)...", key: "cleanup" });
+      const res = await triggerArchivedCleanup(2, "Admin Console Manual Run");
+      message.success({
+        content: res.message || `Successfully pruned ${res.cleanup?.deletedCount || 0} old records!`,
+        key: "cleanup"
+      });
+      await loadArchives();
+    } catch (err) {
+      console.error("Cleanup error:", err);
+      message.error({ content: `Cleanup failed: ${err.message}`, key: "cleanup" });
+    } finally {
+      setCleaningUp(false);
     }
   };
 
@@ -160,7 +181,7 @@ export default function DailyArchivedReportsPage() {
     setDetailDrawerOpen(true);
     setLoadingDetails(true);
     try {
-      const data = await getMealAllocations({ date: report.date });
+      const data = await getMealAllocationsWithArchived({ date: report.date });
       setDetailAllocations(data);
     } catch (err) {
       console.error("Error loading day details:", err);
@@ -433,6 +454,24 @@ export default function DailyArchivedReportsPage() {
           >
             Archive Yesterday's Data ({yesterdayDate})
           </Button>
+
+          <Popconfirm
+            title="Run 1:00 AM Cleanup Job Now?"
+            description="Permanently delete allocation records older than 2 days from the temporary archive list? Note: All generated Excel (.xlsx) files in Firebase Storage will be safely kept."
+            onConfirm={handleRunCleanup}
+            okText="Yes, Run Cleanup"
+            cancelText="Cancel"
+            okButtonProps={{ danger: true }}
+          >
+            <Button
+              danger
+              icon={<DeleteOutlined />}
+              loading={cleaningUp}
+              style={{ borderRadius: 8, fontWeight: 700, height: 40 }}
+            >
+              Run 1:00 AM Cleanup (Prune 2+ Days Old)
+            </Button>
+          </Popconfirm>
 
           <Button
             icon={<CalendarOutlined />}
@@ -843,6 +882,16 @@ export default function DailyArchivedReportsPage() {
                 </div>
               </Col>
             </Row>
+
+            {detailAllocations.length === 0 && !loadingDetails && (
+              <Alert
+                type="info"
+                showIcon
+                message="Raw Transaction Records Pruned (Per 2-Day Retention Schedule)"
+                description="Individual allocation rows for this date have been pruned from the temporary archive list per the 1:00 AM automated cleanup policy. The complete transactions remain permanently preserved in the Excel report. Click the 'Download Excel' button above to access the full workbook."
+                style={{ marginBottom: 16, borderRadius: 8 }}
+              />
+            )}
 
             <Table
               dataSource={detailAllocations}

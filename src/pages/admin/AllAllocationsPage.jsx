@@ -27,6 +27,7 @@ import {
 import dayjs from "dayjs";
 import {
   getMealAllocations,
+  getMealAllocationsWithArchived,
   formatDateKey
 } from "../../services/firebase/mealService";
 import { getCompanies } from "../../services/firebase/companyService";
@@ -59,7 +60,7 @@ export default function AllAllocationsPage() {
     setLoading(true);
     try {
       const [allData, allComps, allCats] = await Promise.all([
-        getMealAllocations(),
+        getMealAllocationsWithArchived(),
         getCompanies(),
         getCategories()
       ]);

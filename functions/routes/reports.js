@@ -528,13 +528,16 @@ async function cleanupOldArchivedAllocations(retentionDays = 2, triggeredBy = "C
   cutoff.setDate(cutoff.getDate() - Number(retentionDays));
   const cutoffDateStr = formatDateKey(cutoff);
 
-  console.log(`[Archive Cleanup - ${triggeredBy}] Scanning ${ARCHIVED_MEALS_COLLECTION} for records on or before ${cutoffDateStr}...`);
+  console.log(`[Archive Cleanup - ${triggeredBy}] Scanning ${ARCHIVED_MEALS_COLLECTION} and ${MEAL_COLLECTION} for records on or before ${cutoffDateStr}...`);
 
-  const snapshot = await db.collection(ARCHIVED_MEALS_COLLECTION)
-    .where("date", "<=", cutoffDateStr)
-    .get();
+  const [archivedSnap, liveSnap] = await Promise.all([
+    db.collection(ARCHIVED_MEALS_COLLECTION).where("date", "<=", cutoffDateStr).get(),
+    db.collection(MEAL_COLLECTION).where("date", "<=", cutoffDateStr).get()
+  ]);
 
-  if (snapshot.empty) {
+  const docsToDelete = [...archivedSnap.docs, ...liveSnap.docs];
+
+  if (docsToDelete.length === 0) {
     console.log(`[Archive Cleanup] No records found on or before ${cutoffDateStr}. Nothing to delete.`);
     return {
       success: true,
@@ -542,7 +545,7 @@ async function cleanupOldArchivedAllocations(retentionDays = 2, triggeredBy = "C
       cutoffDate: cutoffDateStr,
       retentionDays: Number(retentionDays),
       triggeredBy,
-      message: `No archived records found older than or equal to ${cutoffDateStr}.`
+      message: `No allocation records found older than or equal to ${cutoffDateStr}.`
     };
   }
 
@@ -551,7 +554,7 @@ async function cleanupOldArchivedAllocations(retentionDays = 2, triggeredBy = "C
   let count = 0;
   let deletedCount = 0;
 
-  for (const docSnap of snapshot.docs) {
+  for (const docSnap of docsToDelete) {
     batch.delete(docSnap.ref);
     count++;
     deletedCount++;
@@ -567,7 +570,7 @@ async function cleanupOldArchivedAllocations(retentionDays = 2, triggeredBy = "C
     await batch.commit();
   }
 
-  console.log(`[Archive Cleanup] Successfully deleted ${deletedCount} records (<= ${cutoffDateStr}) from ${ARCHIVED_MEALS_COLLECTION}.`);
+  console.log(`[Archive Cleanup] Successfully deleted ${deletedCount} records (<= ${cutoffDateStr}) across archived and live collections.`);
 
   return {
     success: true,
@@ -575,7 +578,7 @@ async function cleanupOldArchivedAllocations(retentionDays = 2, triggeredBy = "C
     cutoffDate: cutoffDateStr,
     retentionDays: Number(retentionDays),
     triggeredBy,
-    message: `Successfully deleted ${deletedCount} archived allocations on or before ${cutoffDateStr}.`
+    message: `Successfully deleted ${deletedCount} allocations on or before ${cutoffDateStr}.`
   };
 }
 

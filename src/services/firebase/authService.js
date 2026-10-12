@@ -1,15 +1,40 @@
-import { signInAnonymously } from "firebase/auth";
-import { auth } from "./config";
-import { getEmployeeById, seedDefaultEmployees } from "./employeeService";
-import { getCategoryByName, seedDefaultCategories } from "./categoryService";
+import { signInWithEmailAndPassword, signInAnonymously, signOut, onAuthStateChanged } from "firebase/auth";
+import { auth } from "./config.js";
+import { getEmployeeById, seedDefaultEmployees } from "./employeeService.js";
+import { getCategoryByName, seedDefaultCategories } from "./categoryService.js";
 
 const SESSION_KEY = "hayleys_meal_session";
+
+/**
+ * Friendly error message resolver for Firebase Auth
+ */
+export function getFirebaseErrorMessage(errorCode, defaultMsg) {
+  switch (errorCode) {
+    case "auth/invalid-credential":
+    case "auth/wrong-password":
+    case "auth/user-not-found":
+      return "Invalid email or password. Please verify your credentials.";
+    case "auth/invalid-email":
+      return "Please enter a valid email address.";
+    case "auth/user-disabled":
+      return "This account has been disabled. Please contact the administrator.";
+    case "auth/too-many-requests":
+      return "Too many unsuccessful login attempts. Please try again later.";
+    case "auth/network-request-failed":
+      return "Network error. Please check your internet connection.";
+    default:
+      return defaultMsg || "Authentication failed. Please check your credentials.";
+  }
+}
 
 /**
  * Ensure active Firebase Auth session for Firestore security rules
  */
 export async function ensureFirebaseAuth() {
   try {
+    if (typeof auth.authStateReady === "function") {
+      await auth.authStateReady();
+    }
     if (!auth.currentUser) {
       await signInAnonymously(auth);
       console.log("[Firebase Auth] Anonymous authentication session established.");
@@ -17,7 +42,7 @@ export async function ensureFirebaseAuth() {
     return auth.currentUser;
   } catch (err) {
     console.warn("[Firebase Auth] Anonymous sign-in notice:", err.message);
-    return null;
+    return auth.currentUser || null;
   }
 }
 
@@ -121,50 +146,94 @@ export async function loginWithBiometric(rawPayload) {
 }
 
 /**
- * Manual Login (Admin or Staff)
+ * Manual Login (Firebase Auth for Admin, or Staff ID match)
  */
 export async function loginManual(username, password) {
-  await ensureFirebaseAuth();
-
   const u = (username || "").trim();
   const p = (password || "").trim();
 
-  // Admin shortcut support (like Python app)
-  if ((u.toLowerCase() === "admin" && (p === "admin" || p === "admin123")) || (u === "1" && p === "admin")) {
-    const employee = await getEmployeeById("admin") || await getEmployeeById("1") || {
-      employee_id: "admin",
-      name: "Admin",
-      designation: "Admin",
-      company: "Hayleys Eco Solutions",
-      category_employment: "Executive"
-    };
-
-    const categoryConfig = await getCategoryByName(employee.category_employment || "Executive");
-
-    const sessionData = {
-      employee_id: "admin",
-      name: employee.name || "Admin",
-      designation: "Admin",
-      company: employee.company || "Hayleys Eco Solutions",
-      category_employment: employee.category_employment || "Executive",
-      category_name: employee.category_employment || "Executive",
-      pay_category: categoryConfig?.configuration_detail || "Full Paid",
-      isAdmin: true,
-      loginMethod: "CREDENTIALS",
-      loginTime: new Date().toISOString()
-    };
-
-    localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
-    return sessionData;
+  if (!u || !p) {
+    throw new Error("Please enter both email/username and password.");
   }
 
-  // Try employee ID match with default password
+  const isEmail = u.includes("@");
+  const isAdminAlias = u.toLowerCase() === "admin" || u === "1";
+
+  // 1. If username is an email or admin identifier, authenticate against Firebase Authentication
+  if (isEmail || isAdminAlias) {
+    const emailToAuth = isEmail ? u.toLowerCase() : "admin@gmail.com";
+    try {
+      const userCred = await signInWithEmailAndPassword(auth, emailToAuth, p);
+      const firebaseUser = userCred.user;
+
+      // Look up employee record
+      let employee = await getEmployeeById("admin");
+      if (!employee) {
+        employee = await getEmployeeById("1");
+      }
+
+      const categoryConfig = await getCategoryByName(employee?.category_employment || "Executive");
+
+      const sessionData = {
+        uid: firebaseUser.uid,
+        employee_id: employee?.employee_id || "admin",
+        name: employee?.name || firebaseUser.displayName || "Admin",
+        email: firebaseUser.email || emailToAuth,
+        designation: employee?.designation || "Administrator",
+        company: employee?.company || "Hayleys Eco Solutions",
+        category_employment: employee?.category_employment || "Executive",
+        category_name: employee?.category_employment || "Executive",
+        pay_category: categoryConfig?.configuration_detail || "Full Paid",
+        isAdmin: true,
+        loginMethod: "FIREBASE_AUTH",
+        loginTime: new Date().toISOString()
+      };
+
+      localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
+      return sessionData;
+    } catch (fbErr) {
+      console.warn("[Firebase Auth] Login error:", fbErr.code, fbErr.message);
+
+      // Support fallback for local dev shortcut if password is admin/admin123
+      if (isAdminAlias && (p === "admin" || p === "admin123")) {
+        const employee = await getEmployeeById("admin") || await getEmployeeById("1") || {
+          employee_id: "admin",
+          name: "Admin",
+          designation: "Admin",
+          company: "Hayleys Eco Solutions",
+          category_employment: "Executive"
+        };
+        const categoryConfig = await getCategoryByName(employee.category_employment || "Executive");
+        const sessionData = {
+          employee_id: "admin",
+          name: employee.name || "Admin",
+          email: "admin@gmail.com",
+          designation: "Admin",
+          company: employee.company || "Hayleys Eco Solutions",
+          category_employment: employee.category_employment || "Executive",
+          category_name: employee.category_employment || "Executive",
+          pay_category: categoryConfig?.configuration_detail || "Full Paid",
+          isAdmin: true,
+          loginMethod: "CREDENTIALS",
+          loginTime: new Date().toISOString()
+        };
+        localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
+        return sessionData;
+      }
+
+      throw new Error(getFirebaseErrorMessage(fbErr.code, fbErr.message));
+    }
+  }
+
+  // 2. Try employee ID match with default password
+  await ensureFirebaseAuth();
   const employee = await getEmployeeById(u);
   if (employee && (p === "123456" || p === "admin123" || p === u)) {
     const categoryConfig = await getCategoryByName(employee.category_employment);
     const sessionData = {
       employee_id: employee.employee_id,
       name: employee.name,
+      email: employee.email || `${employee.employee_id}@hayleys.com`,
       designation: employee.designation,
       company: employee.company || "Hayleys Eco Solutions",
       category_employment: employee.category_employment,
@@ -178,7 +247,7 @@ export async function loginManual(username, password) {
     return sessionData;
   }
 
-  throw new Error("Invalid username or password. Use 'admin' / 'admin123' or a valid Employee ID.");
+  throw new Error("Invalid username or password. Use 'admin@gmail.com' and 'admin@123' or a valid Employee ID.");
 }
 
 /**
@@ -228,7 +297,18 @@ export function getCurrentUser() {
 /**
  * Log out
  */
-export function logoutUser() {
+export async function logoutUser() {
+  try {
+    await signOut(auth);
+  } catch (err) {
+    console.warn("[Firebase Auth] Error signing out:", err);
+  }
   localStorage.removeItem(SESSION_KEY);
 }
 
+/**
+ * Subscribe to Firebase Auth state changes
+ */
+export function onAuthUserChanged(callback) {
+  return onAuthStateChanged(auth, callback);
+}

@@ -7,6 +7,7 @@ import { useAuth } from "../../contexts/AuthContext";
 const { Title, Text } = Typography;
 
 export default function Login() {
+  const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -29,7 +30,7 @@ export default function Login() {
       await loginManual(values.username, values.password);
       navigate("/admin/dashboard");
     } catch (err) {
-      setErrorMsg(err.message || "Invalid username or password");
+      setErrorMsg(err.message || "Invalid email or password");
     } finally {
       setLoading(false);
     }
@@ -123,19 +124,20 @@ export default function Login() {
 
         {/* Login Form */}
         <Form
+          form={form}
           layout="vertical"
           onFinish={onFinish}
-          initialValues={{ username: "admin", password: "admin" }}
+          initialValues={{ username: "admin@gmail.com", password: "admin@123" }}
           requiredMark={false}
         >
           <Form.Item
             name="username"
-            label={<Text strong style={{ fontSize: 13, color: "#334155" }}>Admin Username / ID</Text>}
-            rules={[{ required: true, message: "Please enter your username" }]}
+            label={<Text strong style={{ fontSize: 13, color: "#334155" }}>Admin Email / ID</Text>}
+            rules={[{ required: true, message: "Please enter your admin email or username" }]}
           >
             <Input
               prefix={<UserOutlined style={{ color: "#94a3b8" }} />}
-              placeholder="e.g. admin"
+              placeholder="e.g. admin@gmail.com"
               size="large"
               style={{ borderRadius: 10 }}
             />
@@ -148,7 +150,7 @@ export default function Login() {
           >
             <Input.Password
               prefix={<LockOutlined style={{ color: "#94a3b8" }} />}
-              placeholder="e.g. admin"
+              placeholder="e.g. admin@123"
               size="large"
               style={{ borderRadius: 10 }}
             />
@@ -176,19 +178,25 @@ export default function Login() {
           </Form.Item>
 
           <div
+            onClick={() => {
+              form.setFieldsValue({ username: "admin@gmail.com", password: "admin@123" });
+            }}
+            title="Click to fill credentials"
             style={{
+              cursor: "pointer",
               textAlign: "center",
               marginTop: 18,
               padding: "10px 14px",
               background: "#f8fafc",
               borderRadius: 10,
-              border: "1px solid #f1f5f9"
+              border: "1px solid #f1f5f9",
+              transition: "all 0.2s ease"
             }}
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
               <SafetyCertificateOutlined style={{ color: "#10b981", fontSize: 13 }} />
               <Text type="secondary" style={{ fontSize: 12, color: "#64748b" }}>
-                Default Login: <b>admin</b> / <b>admin</b>
+                Firebase Login: <b>admin@gmail.com</b> / <b>admin@123</b>
               </Text>
             </div>
           </div>

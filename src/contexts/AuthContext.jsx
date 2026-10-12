@@ -43,10 +43,13 @@ export const AuthProvider = ({ children }) => {
     }
   }, [setUser, setLoading]);
 
-  const logout = useCallback(() => {
-    authService.logoutUser();
-    storeLogout();
-    message.info("Signed out successfully.");
+  const logout = useCallback(async () => {
+    try {
+      await authService.logoutUser();
+    } finally {
+      storeLogout();
+      message.info("Signed out successfully.");
+    }
   }, [storeLogout]);
 
   const value = {

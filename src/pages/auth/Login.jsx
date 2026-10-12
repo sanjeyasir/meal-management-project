@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Form, Input, Button, Card, Typography, Alert, Avatar } from "antd";
-import { UserOutlined, LockOutlined, ArrowRightOutlined, SafetyCertificateOutlined } from "@ant-design/icons";
+import { UserOutlined, LockOutlined, ArrowRightOutlined } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 
@@ -127,7 +127,6 @@ export default function Login() {
           form={form}
           layout="vertical"
           onFinish={onFinish}
-          initialValues={{ username: "admin@gmail.com", password: "admin@123" }}
           requiredMark={false}
         >
           <Form.Item
@@ -137,9 +136,10 @@ export default function Login() {
           >
             <Input
               prefix={<UserOutlined style={{ color: "#94a3b8" }} />}
-              placeholder="e.g. admin@gmail.com"
+              placeholder="Enter admin email or username"
               size="large"
               style={{ borderRadius: 10 }}
+              autoComplete="username"
             />
           </Form.Item>
 
@@ -150,9 +150,10 @@ export default function Login() {
           >
             <Input.Password
               prefix={<LockOutlined style={{ color: "#94a3b8" }} />}
-              placeholder="e.g. admin@123"
+              placeholder="Enter password"
               size="large"
               style={{ borderRadius: 10 }}
+              autoComplete="current-password"
             />
           </Form.Item>
 
@@ -176,30 +177,6 @@ export default function Login() {
               Sign In to Management Portal
             </Button>
           </Form.Item>
-
-          <div
-            onClick={() => {
-              form.setFieldsValue({ username: "admin@gmail.com", password: "admin@123" });
-            }}
-            title="Click to fill credentials"
-            style={{
-              cursor: "pointer",
-              textAlign: "center",
-              marginTop: 18,
-              padding: "10px 14px",
-              background: "#f8fafc",
-              borderRadius: 10,
-              border: "1px solid #f1f5f9",
-              transition: "all 0.2s ease"
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-              <SafetyCertificateOutlined style={{ color: "#10b981", fontSize: 13 }} />
-              <Text type="secondary" style={{ fontSize: 12, color: "#64748b" }}>
-                Firebase Login: <b>admin@gmail.com</b> / <b>admin@123</b>
-              </Text>
-            </div>
-          </div>
         </Form>
       </Card>
     </div>

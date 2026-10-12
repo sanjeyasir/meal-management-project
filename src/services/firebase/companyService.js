@@ -7,7 +7,9 @@ export const DEFAULT_COMPANIES = [
   { id: "comp_eco", company_code: "HES", name: "Hayleys Eco Solutions", description: "Main Manufacturing & Eco Solutions Plant" },
   { id: "comp_fibre", company_code: "HFP", name: "Hayleys Fibre Plant 1", description: "Fibre Processing & Production Line" },
   { id: "comp_agro", company_code: "HAG", name: "Hayleys Agriculture", description: "Agricultural Processing Unit" },
-  { id: "comp_logistics", company_code: "HLG", name: "Hayleys Advantis Logistics", description: "Supply Chain & Warehousing" }
+  { id: "comp_logistics", company_code: "HLG", name: "Hayleys Advantis Logistics", description: "Supply Chain & Warehousing" },
+  { id: "comp_rileys", company_code: "RIL", name: "Rileys", description: "Rileys Plant" },
+  { id: "comp_toyo", company_code: "TOY", name: "Toyo", description: "Toyo Plant" }
 ];
 
 /**

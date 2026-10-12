@@ -1,39 +1,44 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Meal allocations: read, create, update, delete allowed for application & canteen kiosk
+    // Helper function to verify that request is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Meal allocations: read, create, update, delete require authentication
     match /meal_allocations/{allocationId} {
-      allow read, write: if true;
+      allow read, write: if isAuthenticated();
     }
     
     // Master employee records & biometric IDs
     match /employees/{employeeId} {
-      allow read, write: if true;
+      allow read, write: if isAuthenticated();
     }
     
     // Employee subsidy categories (Free Meal, Half Paid, Not Paid)
     match /employee_categories/{categoryId} {
-      allow read, write: if true;
+      allow read, write: if isAuthenticated();
     }
     
     // Master companies & business units
     match /companies/{companyId} {
-      allow read, write: if true;
+      allow read, write: if isAuthenticated();
     }
     
-    // Plant departments & sections (legacy compatibility)
+    // Plant departments & sections
     match /departments/{departmentId} {
-      allow read, write: if true;
+      allow read, write: if isAuthenticated();
     }
     
     // System users & administrative credentials
     match /users/{userId} {
-      allow read, write: if true;
+      allow read, write: if isAuthenticated();
     }
 
     // Default rule for all other collections
     match /{document=**} {
-      allow read, write: if request.auth != null || true;
+      allow read, write: if isAuthenticated();
     }
   }
 }

@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meal Ordering - Hayleys Eco Solutions A1 Landscape User Guide Poster</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@700;800;900&family=Noto+Sans+Sinhala:wght@700;800;900&family=Noto+Sans+Tamil:wght@700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      width: 2800px;
+      height: 1980px;
+      margin: 0 auto;
+      background: #ffffff;
+      color: #0f172a;
+      font-family: 'Outfit', 'Noto Sans Sinhala', 'Noto Sans Tamil', 'Nirmala UI', sans-serif;
+      padding: 26px 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Background Botanical Leaf Accents */
+    .bg-leaf-tl {
+      position: absolute;
+      top: -30px;
+      left: -30px;
+      width: 320px;
+      height: 320px;
+      opacity: 0.12;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .bg-leaf-br {
+      position: absolute;
+      bottom: -30px;
+      right: -30px;
+      width: 340px;
+      height: 340px;
+      opacity: 0.12;
+      pointer-events: none;
+      z-index: 0;
+      transform: rotate(180deg);
+    }
+
+    /* Top Brand & Header - Light Green Eco Theme */
+    .header-box {
+      background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 50%, #f0fdf4 100%);
+      border: 4px solid #16a34a;
+      border-radius: 24px;
+      padding: 16px 40px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(22, 163, 74, 0.12);
+      position: relative;
+      z-index: 1;
+    }
+
+    .header-leaf-icon {
+      display: inline-block;
+      vertical-align: middle;
+      width: 38px;
+      height: 38px;
+      margin: 0 8px;
+    }
+
+    .company-name {
+      font-size: 44px;
+      font-weight: 900;
+      letter-spacing: 0.16em;
+      color: #15803d;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+    }
+
+    .main-title {
+      font-size: 74px;
+      font-weight: 900;
+      letter-spacing: -0.01em;
+      color: #064e3b;
+      line-height: 1.1;
+      margin-bottom: 4px;
+    }
+
+    .sub-titles {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 32px;
+      font-size: 34px;
+      font-weight: 900;
+    }
+
+    .sub-si {
+      color: #047857;
+    }
+
+    .sub-ta {
+      color: #b45309;
+    }
+
+    .dot-sep {
+      color: #10b981;
+    }
+
+    /* Cutoff Bar - Eco Green */
+    .cutoff-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f0fdf4;
+      border: 3px solid #16a34a;
+      border-radius: 18px;
+      padding: 12px 42px;
+      font-size: 27px;
+      font-weight: 900;
+      color: #14532d;
+      margin: 8px 0;
+      position: relative;
+      z-index: 1;
+    }
+
+    .cutoff-tag {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: #15803d;
+    }
+
+    .cutoff-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .cutoff-val {
+      color: #ffffff;
+      background: #15803d;
+      padding: 4px 18px;
+      border-radius: 10px;
+      font-size: 27px;
+    }
+
+    /* 2x2 Grid Layout - Strictly Equal Heights - Pulled Up */
+    .grid-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin: 8px 0 16px 0;
+      position: relative;
+      z-index: 1;
+    }
+
+    .grid-row {
+      display: grid;
+      grid-template-columns: 1fr 64px 1fr;
+      align-items: stretch;
+      gap: 16px;
+      height: 655px; /* Strictly equal row height */
+    }
+
+    .row-arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 80px;
+      font-weight: 900;
+      color: #16a34a;
+      user-select: none;
+    }
+
+    .turn-connector {
+      display: flex;
+      justify-content: flex-end;
+      padding-right: 320px;
+      align-items: center;
+      gap: 12px;
+      margin: -12px 0;
+      z-index: 2;
+    }
+
+    .turn-text {
+      font-size: 21px;
+      font-weight: 900;
+      color: #15803d;
+      background: #dcfce7;
+      border: 2px solid #86efac;
+      padding: 4px 20px;
+      border-radius: 20px;
+    }
+
+    .turn-arrow {
+      font-size: 42px;
+      font-weight: 900;
+      color: #16a34a;
+    }
+
+    /* Step Card - Strictly Equal Height Across All 4 */
+    .step-card {
+      background: #ffffff;
+      border: 3.5px solid #cbd5e1;
+      border-radius: 26px;
+      padding: 22px 24px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      gap: 14px;
+      height: 100%; /* Fill the 640px row */
+    }
+
+    .card-step1 { border-color: #16a34a; background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 18%); }
+    .card-step2 { border-color: #059669; background: linear-gradient(180deg, #ecfdf5 0%, #ffffff 18%); }
+    .card-step3 { border-color: #0284c7; background: linear-gradient(180deg, #f0f9ff 0%, #ffffff 18%); }
+    .card-step4 { border-color: #65a30d; background: linear-gradient(180deg, #f7fee7 0%, #ffffff 18%); }
+
+    /* Card Top Header - Compact Wrap with Decreased Width */
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      width: fit-content;
+      max-width: 90%;
+      background: #ffffff;
+      border: 2px solid #e2e8f0;
+      border-radius: 20px;
+      padding: 8px 24px 8px 10px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+    }
+
+    .card-step1 .card-header { border-color: #86efac; background: #f0fdf4; }
+    .card-step2 .card-header { border-color: #6ee7b7; background: #ecfdf5; }
+    .card-step3 .card-header { border-color: #7dd3fc; background: #f0f9ff; }
+    .card-step4 .card-header { border-color: #bef264; background: #f7fee7; }
+
+    .badge {
+      width: 72px;
+      height: 72px;
+      min-width: 72px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 42px;
+      font-weight: 900;
+      color: #ffffff;
+    }
+
+    .badge-1 { background: #16a34a; box-shadow: 0 6px 18px rgba(22,163,74,0.4); }
+    .badge-2 { background: #059669; box-shadow: 0 6px 18px rgba(5,150,105,0.4); }
+    .badge-3 { background: #0284c7; box-shadow: 0 6px 18px rgba(2,132,199,0.4); }
+    .badge-4 { background: #65a30d; box-shadow: 0 6px 18px rgba(101,163,13,0.4); }
+
+    .card-titles {
+      flex: 1;
+    }
+
+    .title-en {
+      font-size: 32px;
+      font-weight: 900;
+      color: #0f172a;
+      line-height: 1.15;
+      margin-bottom: 2px;
+    }
+
+    .title-si {
+      font-size: 26px;
+      font-weight: 800;
+      color: #047857;
+      line-height: 1.2;
+      margin-bottom: 2px;
+    }
+
+    .title-ta {
+      font-size: 24px;
+      font-weight: 800;
+      color: #b45309;
+      line-height: 1.2;
+    }
+
+    /* Card Body: Screenshot on Left (710px wide), Actions on Right - Pulled Up */
+    .card-body {
+      display: grid;
+      grid-template-columns: 710px 1fr;
+      gap: 22px;
+      align-items: flex-start; /* Pulled up to top */
+      margin-top: 2px;
+    }
+
+    .img-box {
+      width: 710px;
+      height: 405px;
+      border-radius: 18px;
+      overflow: hidden;
+      border: 3px solid #86efac;
+      background: #0b1329;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card-step1 .img-box { border-color: #86efac; }
+    .card-step2 .img-box { border-color: #6ee7b7; }
+    .card-step3 .img-box { border-color: #7dd3fc; }
+    .card-step4 .img-box { border-color: #bef264; }
+
+    .img-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #0b1329;
+      display: block;
+    }
+
+    /* Action Instruction Pills - Pulled Up to Match Top of Screenshot */
+    .action-group {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      justify-content: flex-start; /* Pulled up */
+    }
+
+    .action-pill {
+      background: #f8fafc;
+      border: 2px solid #e2e8f0;
+      border-radius: 18px;
+      padding: 18px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .pill-en {
+      font-size: 27px;
+      font-weight: 900;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      line-height: 1.25;
+    }
+
+    .pill-si {
+      font-size: 25px;
+      font-weight: 800;
+      color: #047857;
+      padding-left: 38px;
+      line-height: 1.3;
+    }
+
+    .pill-ta {
+      font-size: 23px;
+      font-weight: 800;
+      color: #9a3412;
+      padding-left: 38px;
+      line-height: 1.3;
+    }
+
+    /* Big Summary Footer - Light Eco Green */
+    .big-footer-banner {
+      background: linear-gradient(90deg, #f0fdf4 0%, #ecfdf5 50%, #fefce8 100%);
+      border: 3.5px solid #16a34a;
+      border-radius: 22px;
+      padding: 18px 36px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(22, 163, 74, 0.08);
+      margin-top: 6px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .bf-title {
+      font-size: 36px;
+      font-weight: 900;
+      color: #14532d;
+      margin-bottom: 4px;
+      letter-spacing: 0.02em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .bf-sub {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 36px;
+      font-size: 26px;
+      font-weight: 900;
+    }
+
+    .bf-sub span.si { color: #047857; }
+    .bf-sub span.ta { color: #b45309; }
+
+  </style>
+</head>
+<body>
+
+  <!-- Decorative Botanical Leaf Graphics (Background Watermarks) -->
+  <svg class="bg-leaf-tl" viewBox="0 0 200 200" fill="#16a34a">
+    <path d="M40,160 C20,120 30,60 80,30 C130,0 180,20 190,70 C200,120 160,170 110,185 C70,195 50,180 40,160 Z M80,30 C90,80 120,120 160,150 M60,90 C80,105 110,115 140,120 M70,140 C95,145 120,148 150,145" stroke="#16a34a" stroke-width="4" fill-opacity="0.15"/>
+  </svg>
+  <svg class="bg-leaf-br" viewBox="0 0 200 200" fill="#16a34a">
+    <path d="M40,160 C20,120 30,60 80,30 C130,0 180,20 190,70 C200,120 160,170 110,185 C70,195 50,180 40,160 Z M80,30 C90,80 120,120 160,150 M60,90 C80,105 110,115 140,120 M70,140 C95,145 120,148 150,145" stroke="#16a34a" stroke-width="4" fill-opacity="0.15"/>
+  </svg>
+
+  <!-- Top Brand & Header -->
+  <header class="header-box">
+    <div class="company-name">
+      <!-- Eco Leaf SVG Graphic -->
+      <svg class="header-leaf-icon" viewBox="0 0 24 24" fill="#16a34a">
+        <path d="M17,8C8,10 5.9,16.17 3.82,21.34L5.71,22L6.66,19.7C7.14,19.87 7.64,20 8,20C19,20 22,3 22,3C21,5 14,5.25 9,6.25C4,7.25 2,11.5 2,13.5C2,15.5 3.75,17.25 3.75,17.25C7,8 17,8 17,8Z"/>
+      </svg>
+      HAYLEYS ECO SOLUTIONS
+      <svg class="header-leaf-icon" viewBox="0 0 24 24" fill="#16a34a" style="transform: scaleX(-1);">
+        <path d="M17,8C8,10 5.9,16.17 3.82,21.34L5.71,22L6.66,19.7C7.14,19.87 7.64,20 8,20C19,20 22,3 22,3C21,5 14,5.25 9,6.25C4,7.25 2,11.5 2,13.5C2,15.5 3.75,17.25 3.75,17.25C7,8 17,8 17,8Z"/>
+      </svg>
+    </div>
+    <h1 class="main-title">MEAL ORDERING GUIDE</h1>
+    <div class="sub-titles">
+      <span class="sub-si">කෑම ඇණවුම් කිරීමේ සරල පියවර</span>
+      <span class="dot-sep">🌿</span>
+      <span class="sub-ta">உணவு முன்பதிவு எளிய வழிகாட்டி</span>
+    </div>
+  </header>
+
+  <!-- Cutoff Banner -->
+  <div class="cutoff-bar">
+    <div class="cutoff-item cutoff-tag">
+      <span>⏰</span>
+      <span>ORDER CUTOFF TIMES:</span>
+    </div>
+    <div class="cutoff-item">
+      <span>Breakfast (උදෑසන • காலை):</span>
+      <span class="cutoff-val">09:00 AM</span>
+    </div>
+    <div class="cutoff-item">
+      <span>Lunch (දිවා • மதிய):</span>
+      <span class="cutoff-val">11:00 AM</span>
+    </div>
+    <div class="cutoff-item">
+      <span>Dinner (රාත්‍රී • இரவு):</span>
+      <span class="cutoff-val">04:00 PM</span>
+    </div>
+  </div>
+
+  <!-- 2 Rows x 2 Columns Grid (Strictly Equal Heights) -->
+  <div class="grid-container">
+
+    <!-- ROW 1: STEP 1 ➔ STEP 2 -->
+    <div class="grid-row">
+
+      <!-- STEP 1 -->
+      <div class="step-card card-step1">
+        <div class="card-header">
+          <div class="badge badge-1">1</div>
+          <div class="card-titles">
+            <div class="title-en">Place Finger or Enter ID</div>
+            <div class="title-si">ඇඟිල්ල තබන්න හෝ ID ගසන්න</div>
+            <div class="title-ta">கைரேகை வைக்கவும் அல்லது ID உள்ளிடவும்</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="img-box">
+            <img src="screenshots/ordering1.png" alt="Step 1 - Login Screen">
+          </div>
+          <div class="action-group">
+            <div class="action-pill">
+              <div class="pill-en">👉 1. Place finger on scanner to login</div>
+              <div class="pill-si">ඇඟිලි සලකුණු යන්ත්‍රය මත ඇඟිල්ල තබන්න</div>
+              <div class="pill-ta">கைரேகை ஸ்கேனரில் உங்கள் விரலை வைக்கவும்</div>
+            </div>
+            <div class="action-pill">
+              <div class="pill-en">⌨️ 2. Or type Employee ID & tap LOGIN</div>
+              <div class="pill-si">හෝ සේවක අංකය ගසා LOGIN ඔබන්න</div>
+              <div class="pill-ta">அல்லது ஊழியர் எண்ணை உள்ளிட்டு LOGIN அழுத்தவும்</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Arrow 1 ➔ 2 -->
+      <div class="row-arrow">➔</div>
+
+      <!-- STEP 2 -->
+      <div class="step-card card-step2">
+        <div class="card-header">
+          <div class="badge badge-2">2</div>
+          <div class="card-titles">
+            <div class="title-en">Pick Days & Meals</div>
+            <div class="title-si">දින හා කෑම ප්‍රමාණය තෝරන්න</div>
+            <div class="title-ta">நாட்கள் மற்றும் உணவு தேர்வு</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="img-box">
+            <img src="screenshots/ordering2.png" alt="Step 2 - Date & Meal Selection">
+          </div>
+          <div class="action-group">
+            <div class="action-pill">
+              <div class="pill-en">📅 1. Pick Days (Today, Tomorrow, 3, 7)</div>
+              <div class="pill-si">අවශ්‍ය දින ගණන තෝරන්න (අද, හෙට, දින 3, 7)</div>
+              <div class="pill-ta">தேவையான நாட்களைத் தேர்வு செய்க (இன்று, நாளை, 3, 7)</div>
+            </div>
+            <div class="action-pill">
+              <div class="pill-en">🍽️ 2. Set Breakfast, Lunch, Dinner (+/-)</div>
+              <div class="pill-si">උදෑසන, දිවා, රාත්‍රී කෑම ප්‍රමාණය (+/-) සකසන්න</div>
+              <div class="pill-ta">காலை, மதிய, இரவு உணவை (+/-) அமைக்கவும்</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Turning Connector: Step 2 ➔ Step 3 -->
+    <div class="turn-connector">
+      <div class="turn-text">🌿 Next Step ⬇️</div>
+      <div class="turn-arrow">⬇️</div>
+    </div>
+
+    <!-- ROW 2: STEP 3 ➔ STEP 4 -->
+    <div class="grid-row">
+
+      <!-- STEP 3 -->
+      <div class="step-card card-step3">
+        <div class="card-header">
+          <div class="badge badge-3">3</div>
+          <div class="card-titles">
+            <div class="title-en">Confirm & Submit Order</div>
+            <div class="title-si">CONFIRM ඔබා ඇණවුම තහවුරු කරන්න</div>
+            <div class="title-ta">CONFIRM அழுத்தி உறுதிப்படுத்தவும்</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="img-box">
+            <img src="screenshots/ordering3.png" alt="Step 3 - Order Processed Success">
+          </div>
+          <div class="action-group">
+            <div class="action-pill">
+              <div class="pill-en">👉 1. Tap blue "CONFIRM" button</div>
+              <div class="pill-si">නිල් පැහැති "CONFIRM" බොත්තම ඔබන්න</div>
+              <div class="pill-ta">நீல நிற "CONFIRM" பொத்தானை அழுத்தவும்</div>
+            </div>
+            <div class="action-pill">
+              <div class="pill-en">✅ 2. Order Processed & Complete!</div>
+              <div class="pill-si">ආහාර ඇණවුම සාර්ථකයි!</div>
+              <div class="pill-ta">உணவு முன்பதிவு வெற்றிகரமாக முடிந்தது!</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Arrow 3 ➔ 4 -->
+      <div class="row-arrow">➔</div>
+
+      <!-- STEP 4 -->
+      <div class="step-card card-step4">
+        <div class="card-header">
+          <div class="badge badge-4">4</div>
+          <div class="card-titles">
+            <div class="title-en">Next Login: View Orders</div>
+            <div class="title-si">නැවත Login වූ විට: වෙන්කළ කෑම පෙන්වයි</div>
+            <div class="title-ta">அடுத்த முறை: உறுதி செய்த உணவுகளைக் காணலாம்</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="img-box">
+            <img src="screenshots/ordering4.png" alt="Step 4 - Confirmed Orders on Next Login">
+          </div>
+          <div class="action-group">
+            <div class="action-pill">
+              <div class="pill-en">👤 1. Login anytime to view confirmed orders</div>
+              <div class="pill-si">ඕනෑම වෙලාවක Login වී වෙන්කළ කෑම බලාගත හැක</div>
+              <div class="pill-ta">உள்நுழைந்து முன்பதிவு செய்த உணவுகளைப் பார்க்கலாம்</div>
+            </div>
+            <div class="action-pill">
+              <div class="pill-en">📋 2. See your 7-day bookings on right sidebar</div>
+              <div class="pill-si">දකුණු පස තීරුවෙන් ඉදිරි දින 7 කෑම බලාගන්න</div>
+              <div class="pill-ta">வலதுபுறப் பட்டியலில் 7 நாள் உணவுகள் தெரியும்</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Big Summary Footer -->
+  <div class="big-footer-banner">
+    <div class="bf-title">
+      <span>🌿</span> 1. PLACE FINGER ➔ 2. PICK DAYS & MEALS ➔ 3. CONFIRM ➔ 4. DONE!
+    </div>
+    <div class="bf-sub">
+      <span class="si">1. ඇඟිල්ල තබන්න ➔ 2. දින හා කෑම තෝරන්න ➔ 3. CONFIRM ඔබන්න ➔ 4. සාර්ථකයි!</span>
+      <span>•</span>
+      <span class="ta">1. கைரேகை ➔ 2. நாட்கள்/உணவு ➔ 3. CONFIRM ➔ 4. நிறைவு!</span>
+    </div>
+  </div>
+
+</body>
+</html>

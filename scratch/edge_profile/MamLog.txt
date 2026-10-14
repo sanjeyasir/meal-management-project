@@ -1,0 +1,22 @@
+[2026-10-14T04:16:35.030Z] [INFO] ========================================================================================================================
+[2026-10-14T04:16:35.031Z] [INFO] Initializing MAM Client.
+App: com.microsoft.edge 155.0.4283.45
+SDK: 2.4.2.0
+OS: windows 10.0.26300.9550
+DeviceType: Desktop
+Manufacturer: Dell Inc.
+Model: Latitude 7340
+Telemetry: yes
+Managed device support: enabled
+[2026-10-14T04:16:35.031Z] [INFO] Telemetry session b73d419d-2e72-421e-9607-b8fb7c59a0a0.
+[2026-10-14T04:16:35.032Z] [INFO] ECS client initialized.
+[2026-10-14T04:16:35.032Z] [INFO] Initializing cache (v1).
+[2026-10-14T04:16:35.033Z] [INFO] Flight configuration defaults:
+{"924da161-897f-4061-ad83-eca72d58a16e_0":{"source":0,"value":false},"DesktopMAM_Canary":{"source":0,"value":0},"f9fec151-8ff5-437c-a028-0e92e9878d8d_0":{"source":0,"value":false},"f9fec151-8ff5-437c-a028-0e92e9878d8d_1":{"source":0,"value":false}}
+[2026-10-14T04:16:35.033Z] [INFO] Registered Flight Client FlightClientId:6a1b553f-06f8-43f5-8e14-2f7a7e4c3a01 with new flight key bb35592d-eb33-445a-ba65-08e9e09113aa.
+[2026-10-14T04:16:35.036Z] [INFO] Started ECS service request processing.
+[2026-10-14T04:16:35.036Z] [INFO] Fetching flight data for flight key bb35592d-eb33-445a-ba65-08e9e09113aa...
+[2026-10-14T04:16:36.155Z] [INFO] Flight data fetch for flight key bb35592d-eb33-445a-ba65-08e9e09113aa succeeded. (EcsCorrelationId:MIRA: e3948a23-35ad-6fc5-7c1a-323a17901605 JH0PR01CA0018 2026-10-14T04:16:36.206Z)
+[2026-10-14T04:16:36.155Z] [INFO] Scheduling next ECS request for flight key bb35592d-eb33-445a-ba65-08e9e09113aa at 2026-10-14T05:16:36.155Z.
+[2026-10-14T04:16:36.155Z] [INFO] Application flight configuration updated:
+{"924da161-897f-4061-ad83-eca72d58a16e_0":{"source":0,"value":false},"DesktopMAM_Canary":{"source":1,"value":1},"f9fec151-8ff5-437c-a028-0e92e9878d8d_0":{"source":0,"value":false},"f9fec151-8ff5-437c-a028-0e92e9878d8d_1":{"source":0,"value":false}}

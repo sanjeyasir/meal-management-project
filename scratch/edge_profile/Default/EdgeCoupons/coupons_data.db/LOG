@@ -1,0 +1,5 @@
+2026/10/14-09:46:37.169 4538 Creating DB d:\firebaselearning\meal-management-project\scratch\edge_profile\Default\EdgeCoupons/coupons_data.db since it was missing.
+2026/10/14-09:46:37.180 4538 Reusing MANIFEST d:\firebaselearning\meal-management-project\scratch\edge_profile\Default\EdgeCoupons/coupons_data.db/MANIFEST-000001
+2026/10/14-09:46:37.601 139c Level-0 table #5: started
+2026/10/14-09:46:37.609 139c Level-0 table #5: 683273 bytes OK
+2026/10/14-09:46:37.612 139c Delete type=0 #3

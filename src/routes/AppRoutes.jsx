@@ -16,6 +16,7 @@ import MealOrderPage from "../pages/meals/MealOrderPage";
 import MealConfirmOrderPage from "../pages/meals/MealConfirmOrderPage";
 import MealReceivePage from "../pages/meals/MealReceivePage";
 import MyMealAllocationsPage from "../pages/meals/MyMealAllocationsPage";
+import UserGuidePage from "../pages/guide/UserGuidePage";
 
 export default function AppRoutes() {
   return (
@@ -25,6 +26,11 @@ export default function AppRoutes() {
       <Route path="/login" element={<Navigate to="/admin/login" replace />} />
       <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
       <Route path="/admin/login" element={<Login />} />
+
+      {/* Public User Manual & Documentation Guides (Pre-login Accessible) */}
+      <Route path="/guide" element={<UserGuidePage />} />
+      <Route path="/user-guide" element={<UserGuidePage />} />
+      <Route path="/admin/guide" element={<UserGuidePage />} />
 
       {/* Redirect old /kiosk routes to Dashboard */}
       <Route path="/kiosk" element={<Navigate to="/admin/dashboard" replace />} />

@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Hayleys Eco Solutions - Meal Management System - Web Portal User Manual</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Sinhala:wght@400;600;700&family=Noto+Sans+Tamil:wght@400;600;700&display=swap');
+
+    @page {
+      size: A4 portrait;
+      margin: 10mm 12mm 12mm 12mm;
+      @bottom-right {
+        content: "Hayleys Eco Solutions • Operations Portal | Page " counter(page);
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 8pt;
+        color: #64748b;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', 'Noto Sans Sinhala', 'Noto Sans Tamil', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #0f172a;
+      background: #ffffff;
+      line-height: 1.45;
+      font-size: 10pt;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .page {
+      width: 100%;
+      min-height: 275mm;
+      page-break-after: always;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding-bottom: 5mm;
+    }
+
+    .page:last-child {
+      page-break-after: avoid;
+    }
+
+    /* Cover Page */
+    .cover-container {
+      height: 275mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border: 3px solid #15803d;
+      border-radius: 16px;
+      padding: 40px;
+      background: linear-gradient(145deg, #f0fdf4 0%, #ffffff 40%, #f0fdf4 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cover-decor {
+      position: absolute;
+      top: -60px;
+      right: -60px;
+      width: 260px;
+      height: 260px;
+      background: radial-gradient(circle, rgba(22, 163, 74, 0.15) 0%, rgba(22, 163, 74, 0) 70%);
+      border-radius: 50%;
+    }
+
+    .brand-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: #15803d;
+      color: #ffffff;
+      padding: 8px 18px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 11pt;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      box-shadow: 0 4px 12px rgba(21, 128, 61, 0.25);
+    }
+
+    .cover-title-group {
+      margin-top: 30px;
+    }
+
+    .cover-sub {
+      color: #166534;
+      font-size: 14pt;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .cover-title {
+      font-size: 28pt;
+      font-weight: 800;
+      color: #064e3b;
+      line-height: 1.15;
+      margin-bottom: 12px;
+    }
+
+    .cover-trilingual {
+      font-size: 11.5pt;
+      color: #334155;
+      margin-top: 10px;
+      line-height: 1.6;
+      border-left: 4px solid #16a34a;
+      padding-left: 14px;
+      background: rgba(240, 253, 244, 0.7);
+      border-radius: 0 8px 8px 0;
+      padding-top: 6px;
+      padding-bottom: 6px;
+    }
+
+    .cover-summary {
+      background: #ffffff;
+      border: 1px solid #bbf7d0;
+      border-radius: 12px;
+      padding: 18px 22px;
+      box-shadow: 0 4px 15px rgba(22, 163, 74, 0.08);
+      margin: 20px 0;
+    }
+
+    .cover-summary h4 {
+      color: #166534;
+      font-size: 12pt;
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .cover-summary p {
+      font-size: 9.5pt;
+      color: #475569;
+      line-height: 1.5;
+    }
+
+    .cover-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      border-radius: 12px;
+      padding: 16px 20px;
+    }
+
+    .meta-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .meta-label {
+      font-size: 8pt;
+      color: #64748b;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .meta-value {
+      font-size: 10pt;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .cover-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid #cbd5e1;
+      padding-top: 14px;
+      font-size: 8.5pt;
+      color: #64748b;
+    }
+
+    /* Interior Pages Header */
+    .module-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #16a34a;
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+    }
+
+    .module-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .module-num-badge {
+      background: #15803d;
+      color: #ffffff;
+      font-size: 10pt;
+      font-weight: 800;
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .module-heading {
+      font-size: 14pt;
+      font-weight: 800;
+      color: #064e3b;
+      line-height: 1.2;
+    }
+
+    .module-route {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-family: monospace;
+      font-size: 8.5pt;
+      color: #334155;
+      font-weight: 600;
+    }
+
+    .trilingual-subtitle {
+      font-size: 9pt;
+      color: #166534;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    /* Content Cards */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .grid-equal {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .info-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 10px 14px;
+    }
+
+    .info-card.green-accent {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+    }
+
+    .info-card h4 {
+      font-size: 9.5pt;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .info-card.green-accent h4 {
+      color: #166534;
+    }
+
+    .info-card p, .info-card ul {
+      font-size: 8.5pt;
+      color: #334155;
+      line-height: 1.45;
+    }
+
+    .info-card ul {
+      padding-left: 16px;
+    }
+
+    .info-card li {
+      margin-bottom: 3px;
+    }
+
+    /* Screenshot Box */
+    .screenshot-container {
+      background: #ffffff;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 10px;
+      padding: 6px;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+      margin-top: 6px;
+      margin-bottom: 8px;
+    }
+
+    .screenshot-img {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .screenshot-caption {
+      font-size: 7.5pt;
+      color: #64748b;
+      text-align: center;
+      margin-top: 4px;
+      font-style: italic;
+    }
+
+    /* Step List */
+    .steps-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin: 8px 0;
+    }
+
+    .step-item {
+      display: flex;
+      gap: 8px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 6px 10px;
+      align-items: flex-start;
+    }
+
+    .step-badge {
+      background: #10b981;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 8pt;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .step-content {
+      font-size: 8.5pt;
+      color: #1e293b;
+    }
+
+    .step-content strong {
+      color: #0f172a;
+    }
+
+    /* Table */
+    .doc-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 8pt;
+      margin: 6px 0;
+    }
+
+    .doc-table th {
+      background: #ecfdf5;
+      color: #065f46;
+      font-weight: 700;
+      text-align: left;
+      padding: 6px 8px;
+      border: 1px solid #a7f3d0;
+    }
+
+    .doc-table td {
+      padding: 5px 8px;
+      border: 1px solid #e2e8f0;
+      color: #334155;
+    }
+
+    .doc-table tr:nth-child(even) {
+      background: #f8fafc;
+    }
+
+    .pill-tag {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 7pt;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .pill-green { background: #dcfce7; color: #15803d; }
+    .pill-amber { background: #fef3c7; color: #b45309; }
+    .pill-red { background: #fee2e2; color: #b91c1c; }
+    .pill-blue { background: #e0e7ff; color: #4338ca; }
+
+    /* Highlights / Callout */
+    .callout-box {
+      border-left: 3.5px solid #16a34a;
+      background: #f0fdf4;
+      padding: 8px 12px;
+      border-radius: 0 8px 8px 0;
+      font-size: 8.5pt;
+      color: #166534;
+      margin: 6px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .callout-box strong {
+      color: #14532d;
+    }
+
+    .page-footer-nav {
+      border-top: 1px solid #e2e8f0;
+      padding-top: 6px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 7.5pt;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ================= PAGE 1: COVER PAGE ================= -->
+  <div class="page">
+    <div class="cover-container">
+      <div class="cover-decor"></div>
+      
+      <div>
+        <div class="brand-badge">
+          🌿 Hayleys Eco Solutions • Operations Portal
+        </div>
+
+        <div class="cover-title-group">
+          <div class="cover-sub">Standard Operating Procedure & User Guide</div>
+          <h1 class="cover-title">Meal Management Web Portal<br>Administrator & Operations Manual</h1>
+          
+          <div class="cover-trilingual">
+            <strong>සිංහල:</strong> පරිපාලන සහ මෙහෙයුම් වෙබ් ද්වාරය සඳහා වූ සම්පූර්ණ පරිශීලක අත්පොත<br>
+            <strong>தமிழ்:</strong> நிர்வாக மற்றும் செயல்பாட்டு இணையதள முழுமையான பயனர் கையேடு
+          </div>
+        </div>
+      </div>
+
+      <div class="cover-summary">
+        <h4>📋 Document Purpose & Executive Summary</h4>
+        <p>
+          This official user document provides end-to-end operational instructions for plant administrators, HR executives, and catering management teams utilizing the <strong>Hayleys Eco Solutions Meal Management System</strong>. It details all seven functional modules, including real-time consumption dashboards, daily catering allocation sheets, historical employee audits, automated cloud archival engines, workforce master roster synchronization, and company subsidy policy rules.
+        </p>
+      </div>
+
+      <div class="cover-meta-grid">
+        <div class="meta-item">
+          <span class="meta-label">System Production URL</span>
+          <span class="meta-value">https://meal-management-project.web.app</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Target Audience</span>
+          <span class="meta-value">Plant Admins, HR & Catering Supervisors</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Document Version & Date</span>
+          <span class="meta-value">v2.4 (October 2026 Production Release)</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Operational Facility</span>
+          <span class="meta-value">Hayleys Eco Solutions & Associated Entities</span>
+        </div>
+      </div>
+
+      <div class="cover-footer">
+        <span>Confidential & Proprietary • For Internal Operational Use Only</span>
+        <span>Generated from Live Production Systems</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= PAGE 2: TABLE OF CONTENTS & SYSTEM OVERVIEW ================= -->
+  <div class="page">
+    <div>
+      <div class="module-header">
+        <div class="module-title-wrap">
+          <div class="module-num-badge">📖</div>
+          <h2 class="module-heading">Table of Contents & System Architecture Overview</h2>
+        </div>
+        <div class="module-route">Architecture & Directory</div>
+      </div>
+      <div class="trilingual-subtitle">පද්ධති සැකැස්ම සහ අන්තර්ගතය | கணினி கட்டமைப்பு மற்றும் உள்ளடக்க அட்டவணை</div>
+
+      <div class="grid-equal">
+        <div class="info-card green-accent">
+          <h4>📑 Document Directory & Modules</h4>
+          <table class="doc-table">
+            <thead>
+              <tr>
+                <th>Module</th>
+                <th>System Section & Title</th>
+                <th>Route</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Module 1</strong></td>
+                <td>Secure Portal Authentication & Login</td>
+                <td><code>#/admin/login</code></td>
+              </tr>
+              <tr>
+                <td><strong>Module 2</strong></td>
+                <td>Operations & Consumption Dashboard</td>
+                <td><code>#/admin/dashboard</code></td>
+              </tr>
+              <tr>
+                <td><strong>Module 3</strong></td>
+                <td>Today's Allocations & Formatted Excel</td>
+                <td><code>#/admin/reports</code></td>
+              </tr>
+              <tr>
+                <td><strong>Module 4</strong></td>
+                <td>Previous Day Allocations & Historical Audits</td>
+                <td><code>#/admin/all-allocations</code></td>
+              </tr>
+              <tr>
+                <td><strong>Module 5</strong></td>
+                <td>Daily Archived Reports & Cloud Storage</td>
+                <td><code>#/admin/daily-archive</code></td>
+              </tr>
+              <tr>
+                <td><strong>Module 6</strong></td>
+                <td>Employees Directory & Excel Bulk Sync</td>
+                <td><code>#/admin/employees</code></td>
+              </tr>
+              <tr>
+                <td><strong>Module 7</strong></td>
+                <td>Master Data & Subsidy Rule Settings</td>
+                <td><code>#/admin/settings</code></td>
+              </tr>
+              <tr>
+                <td><strong>Appendix</strong></td>
+                <td>SOP Checklist, Cutoff Timetable & Contacts</td>
+                <td>System Guidelines</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="info-card">
+          <h4>👥 Operational User Roles & Permissions</h4>
+          <ul style="margin-top: 6px;">
+            <li><strong>Super Administrator:</strong> Full control over master data, employee directory, subsidy configurations, company entities, and database tools.</li>
+            <li><strong>Plant Catering Supervisor:</strong> Real-time allocation monitoring, catering portion summary downloads, and active meal collection audits.</li>
+            <li><strong>HR & Payroll Officer:</strong> Historical allocation auditing, Excel exports for payroll deduction reconciliation, and bulk employee roster imports.</li>
+          </ul>
+
+          <h4 style="margin-top: 10px;">🕒 Factory Meal Slots & Operational Cutoffs</h4>
+          <table class="doc-table">
+            <tbody>
+              <tr>
+                <td><strong>Breakfast</strong></td>
+                <td>06:00 AM – 09:00 AM</td>
+                <td>Order Cutoff: <strong>09:00 AM</strong></td>
+              </tr>
+              <tr>
+                <td><strong>Lunch</strong></td>
+                <td>11:00 AM – 01:00 PM</td>
+                <td>Order Cutoff: <strong>11:00 AM</strong></td>
+              </tr>
+              <tr>
+                <td><strong>Dinner</strong></td>
+                <td>04:00 PM – 09:00 PM</td>
+                <td>Order Cutoff: <strong>04:00 PM</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="callout-box">
+        <span>💡</span>
+        <div>
+          <strong>System Compatibility:</strong> Built for modern web browsers (Google Chrome, Microsoft Edge, Mozilla Firefox) with responsive design optimized for desktop workstations, tablets, and mobile admin review.
+        </div>
+      </div>
+    </div>
+
+    <div class="page-footer-nav">
+      <span>Hayleys Eco Solutions — Meal Management System</span>
+      <span>Page 2 of 10</span>
+    </div>
+  </div>
+
+  <!-- ================= PAGE 3: MODULE 1 - LOGIN ================= -->
+  <div class="page">
+    <div>
+      <div class="module-header">
+        <div class="module-title-wrap">
+          <div class="module-num-badge">01</div>
+          <h2 class="module-heading">Secure Portal Authentication & Login</h2>
+        </div>
+        <div class="module-route">#/admin/login</div>
+      </div>
+      <div class="trilingual-subtitle">ආරක්ෂිත පරිපාලක පිවිසුම | பாதுகாப்பான நிர்வாக நுழைவு</div>
+
+      <div class="grid-2">
+        <div class="info-card green-accent">
+          <h4>🔐 Accessing the Management System</h4>
+          <p>The web portal is protected by role-based authentication. Only authorized administrative personnel, HR executives, and catering supervisors are issued operational credentials.</p>
+          
+          <div class="steps-list">
+            <div class="step-item">
+              <span class="step-badge">1</span>
+              <div class="step-content">Open browser and navigate to <strong>https://meal-management-project.web.app/#/admin/login</strong>.</div>
+            </div>
+            <div class="step-item">
+              <span class="step-badge">2</span>
+              <div class="step-content">Enter your registered <strong>Admin Email or ID</strong> into the first input field.</div>
+            </div>
+            <div class="step-item">
+              <span class="step-badge">3</span>
+              <div class="step-content">Type your secure password and click <strong>"Sign In to Management Portal"</strong>.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-card">
+          <h4>🛡️ Security Highlights</h4>
+          <ul>
+            <li><strong>SSL Encryption:</strong> 256-bit HTTPS secure transport.</li>
+            <li><strong>Auto Redirect:</strong> Logged-in admins are automatically redirected to the live Operations Dashboard.</li>
+            <li><strong>Invalid Attempt Alerts:</strong> Clear error notifications for incorrect credentials.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="screenshot-container">
+        <img src="screenshots/web1.png" class="screenshot-img" alt="Admin Login Screen">
+        <div class="screenshot-caption">Figure 1.1: Web Management Portal Secure Login Interface (web1.png)</div>
+      </div>
+    </div>
+
+    <div class="page-footer-nav">
+      <span>Hayleys Eco Solutions — Meal Management System</span>
+      <span>Page 3 of 10</span>
+    </div>
+  </div>
+
+  <!-- ================= PAGE 4: MODULE 2 - DASHBOARD ================= -->
+  <div class="page">
+    <div>
+      <div class="module-header">
+        <div class="module-title-wrap">
+          <div class="module-num-badge">02</div>
+          <h2 class="module-heading">Operations & Consumption Dashboard</h2>
+        </div>
+        <div class="module-route">#/admin/dashboard</div>
+      </div>
+      <div class="trilingual-subtitle">සජීවී මෙහෙයුම් සහ පරිභෝජන උපකරණ පුවරුව | நேரடி செயல்பாடுகள் & நுகர்வு டாஷ்போர்டு</div>
+
+      <div class="grid-2">
+        <div class="info-card green-accent">
+          <h4>📊 Real-time Operational KPI Metrics</h4>
+          <p>Provides catering managers and plant supervisors with instant, live visibility into workforce meal demands:</p>
+          <ul>
+            <li><strong>Total Meals Scheduled:</strong> Total meal orders booked across the selected timeframe.</li>
+            <li><strong>Dispensed (Received):</strong> Real-time count and percentage of meals verified at the counter.</li>
+            <li><strong>Pending Dispensing:</strong> Meals currently awaiting collection by plant employees.</li>
+            <li><strong>Registered Workforce:</strong> Total enrolled employees across all entities (579+ active).</li>
+          </ul>
+        </div>
+
+        <div class="info-card">
+          <h4>📈 Live Breakdown Visualizations</h4>
+          <ul>
+            <li><strong>Portion Demand Breakdown:</strong> Real-time progress bars for Breakfast (06:00-09:00 AM), Lunch (11:00 AM-01:00 PM), and Dinner (04:00-09:00 PM).</li>
+            <li><strong>Department Consumption:</strong> Tracks portion distributions per department with completion rates.</li>
+            <li><strong>Subsidy Share:</strong> Visual distribution across Full Paid, Half Paid, and Not Paid.</li>
+            <li><strong>Export:</strong> Instant <em>"Download Excel Report"</em> button.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="screenshot-container">
+        <img src="screenshots/web2.png" class="screenshot-img" alt="Operations Dashboard Screen">
+        <div class="screenshot-caption">Figure 2.1: Live Operations & Consumption Dashboard Interface (web2.png)</div>
+      </div>
+    </div>
+
+    <div class="page-footer-nav">
+      <span>Hayleys Eco Solutions — Meal Management System</span>
+      <span>Page 4 of 10</span>
+    </div>
+  </div>
+
+  <!-- ================= PAGE 5: MODULE 3 - TODAY'S ALLOCATIONS & EXCEL ================= -->
+  <div class="page">
+    <div>
+      <div class="module-header">
+        <div class="module-title-wrap">
+          <div class="module-num-badge">03</div>
+          <h2 class="module-heading">Today's Allocations & Formatted Excel Reports</h2>
+        </div>
+        <div class="module-route">#/admin/reports</div>
+      </div>
+      <div class="trilingual-subtitle">අද දින ආහාර වෙන්කිරීම් සහ එක්සෙල් වාර්තා | இன்றைய உணவு ஒதுக்கீடுகள் & எக்செல் அறிக்கைகள்</div>
+
+      <div class="grid-2">
+        <div class="info-card green-accent">
+          <h4>📋 Real-time Order Monitoring & Management</h4>
+          <p>Enables catering teams to view and verify every employee meal scheduled for today in real-time:</p>
+          <ul>
+            <li><strong>Table Details:</strong> Displays Employee ID, Full Name, Operating Company, Meal Category, Subsidy Plan, Meal Slot, Status (Ordered/Dispensed), and Exact Booking Time.</li>
+            <li><strong>Multi-Dimensional Filters:</strong> Instant search by Employee Name/ID, Company dropdown, Meal Slot filter, Status filter, and Subsidy Plan filter.</li>
+            <li><strong>Order Cancellation:</strong> Dedicated <strong>"Delete"</strong> button to remove erroneous bookings upon verified request.</li>
+          </ul>
+        </div>
+
+        <div class="info-card">
+          <h4>📑 Standardized Formatted Excel Export</h4>
+          <p>Click <strong>"Export Today's Formatted Excel (.xlsx)"</strong> to generate an official print-ready spreadsheet containing:</p>
+          <ul>
+            <li>Summary breakdown headers for catering contractor handoff.</li>
+            <li>Alphabetical employee roster segmented by meal slots.</li>
+            <li>Signature verification columns for physical counter dispensing.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="screenshot-container">
+        <img src="screenshots/web3.png" class="screenshot-img" alt="Today's Allocations Screen">
+        <div class="screenshot-caption">Figure 3.1: Today's Allocations Table & Filter System (web3.png)</div>
+      </div>
+    </div>
+
+    <div class="page-footer-nav">
+      <span>Hayleys Eco Solutions — Meal Management System</span>
+      <span>Page 5 of 10</span>
+    </div>
+  </div>
+
+  <!-- ================= PAGE 6: MODULE 4 - PREVIOUS DAY ALLOCATIONS ================= -->
+  <div class="page">
+    <div>
+      <div class="module-header">
+        <div class="module-title-wrap">
+          <div class="module-num-badge">04</div>
+          <h2 class="module-heading">Previous Day Allocations & Historical Audits</h2>
+        </div>
+        <div class="module-route">#/admin/all-allocations</div>
+      </div>
+      <div class="trilingual-subtitle">පෙර දින වෙන්කිරීම් විගණනය | முந்தைய நாள் ஒதுக்கீடுகள் மற்றும் தணிக்கை</div>
+
+      <div class="grid-2">
+        <div class="info-card green-accent">
+          <h4>🔍 Historical Allocation Audit Engine</h4>
+          <p>Allows HR, finance, and plant management to inspect and audit past meal allocations without risking active operational data:</p>
+          <ul>
+            <li><strong>Date Range Selector:</strong> Flexible "From Date" to "To Date" calendar pickers to query any historical fiscal period.</li>
+            <li><strong>Employee Audit Lookup:</strong> Search by Employee ID or Name to review individual attendance and meal claim records.</li>
+            <li><strong>Company & Subsidy Auditing:</strong> Filter historical records by Company entity and Subsidy tier.</li>
+          </ul>
+        </div>
+
+        <div class="info-card">
+          <h4>📥 Historical Excel Export</h4>
+          <p>Click <strong>"Export Historical Excel (.xlsx)"</strong> to produce consolidated audit files utilized for:</p>
+          <ul>
+            <li>Monthly payroll meal deductions and catering cost reconciliations.</li>
+            <li>External catering invoice validation and discrepancy resolution.</li>
+            <li>Compliance reporting for internal and external corporate audits.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="screenshot-container">
+        <img src="screenshots/web4.png" class="screenshot-img" alt="Previous Day Allocations Screen">
+        <div class="screenshot-caption">Figure 4.1: Historical Allocations Query & Audit Interface (web4.png)</div>
+      </div>
+    </div>
+
+    <div class="page-footer-nav">
+      <span>Hayleys Eco Solutions — Meal Management System</span>
+      <span>Page 6 of 10</span>
+    </div>
+  </div>
+
+  <!-- ================= PAGE 7: MODULE 5 - DAILY ARCHIVED REPORTS ================= -->
+  <div class="page">
+    <div>
+      <div class="module-header">
+        <div class="module-title-wrap">
+          <div class="module-num-badge">05</div>
+          <h2 class="module-heading">Daily Archived Reports & Cloud Storage</h2>
+        </div>
+        <div class="module-route">#/admin/daily-archive</div>
+      </div>
+      <div class="trilingual-subtitle">දෛනික ලේඛනාගාර වාර්තා සහ ක්ලවුඩ් ගබඩාව | தினசரி காப்பக அறிக்கைகள் & கிளவுட் சேமிப்பு</div>
+
+      <div class="grid-2">
+        <div class="info-card green-accent">
+          <h4>🗄️ Automated Multi-Day Archival Architecture</h4>
+          <p>Automated midnight routines ensure database performance while preserving permanent compliance archives:</p>
+          <ul>
+            <li><strong>3-Day Consolidated Excel:</strong> Each daily archive compiles target day allocations combined with the 2 preceding days into a structured multi-tab Excel workbook.</li>
+            <li><strong>Firebase Cloud Storage:</strong> Archives are securely uploaded to cloud storage with immutable download links.</li>
+            <li><strong>1:00 AM Auto-Cleanup:</strong> Automatically prunes temporary active allocations older than 2 days to maintain blazing system performance.</li>
+          </ul>
+        </div>
+
+        <div class="info-card">
+          <h4>⚙️ On-Demand Archival Tools</h4>
+          <ul>
+            <li><strong>"Archive Yesterday's Data":</strong> One-click manual backup trigger.</li>
+            <li><strong>"Archive Custom Date...":</strong> Creates an archive for any arbitrary historical date on request.</li>
+            <li><strong>"Run 1:00 AM Cleanup":</strong> Manual purge for test or redundant data.</li>
+            <li><strong>Card View:</strong> Visual cards detailing daily portions, dispense rate %, meal slot breakdowns, and direct Excel download.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="screenshot-container">
+        <img src="screenshots/web5.png" class="screenshot-img" alt="Daily Archived Reports Screen">
+        <div class="screenshot-caption">Figure 5.1: Daily Archived Reports Cards & Storage Manager (web5.png)</div>
+      </div>
+    </div>
+
+    <div class="page-footer-nav">
+      <span>Hayleys Eco Solutions — Meal Management System</span>
+      <span>Page 7 of 10</span>
+    </div>
+  </div>
+
+  <!-- ================= PAGE 8: MODULE 6 - EMPLOYEES DIRECTORY ================= -->
+  <div class="page">
+    <div>
+      <div class="module-header">
+        <div class="module-title-wrap">
+          <div class="module-num-badge">06</div>
+          <h2 class="module-heading">Master Employees Directory & Bulk Excel Sync</h2>
+        </div>
+        <div class="module-route">#/admin/employees</div>
+      </div>
+      <div class="trilingual-subtitle">සේවක නාමාවලිය සහ එක්සෙල් සමමුහුර්තකරණය | பணியாளர் அடைவு & எக்செல் ஒத்திசைவு</div>
+
+      <div class="grid-2">
+        <div class="info-card green-accent">
+          <h4>👥 Centralized Workforce Master Database</h4>
+          <p>Maintains employee profiles for 579+ factory workers, staff, and contractors across all operating entities:</p>
+          <ul>
+            <li><strong>Profile Fields:</strong> Employee ID, Full Name, Designation, Meal Category (Staff, Worker, Executive, Contractor), Payment Plan (Full Paid, Half Paid, Not Paid), and Company.</li>
+            <li><strong>Instant Search:</strong> Find any employee in milliseconds by typing their ID, name, or company.</li>
+            <li><strong>Profile Modification:</strong> In-line <strong>"Edit"</strong> and <strong>"Delete"</strong> buttons for employee maintenance.</li>
+          </ul>
+        </div>
+
+        <div class="info-card">
+          <h4>📊 Bulk Roster Excel Operations</h4>
+          <ul>
+            <li><strong>"Download Template":</strong> Downloads a pre-formatted standardized template for workforce data.</li>
+            <li><strong>"Import Excel":</strong> Instant bulk upload of new employee lists from HR systems without manual data entry.</li>
+            <li><strong>"Export":</strong> Generates a full workforce roster export in seconds.</li>
+            <li><strong>"Add Employee":</strong> Form modal to manually enroll individual new hires.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="screenshot-container">
+        <img src="screenshots/web6.png" class="screenshot-img" alt="Employees Directory Screen">
+        <div class="screenshot-caption">Figure 6.1: Employees Master Directory & Bulk Synchronization Tools (web6.png)</div>
+      </div>
+    </div>
+
+    <div class="page-footer-nav">
+      <span>Hayleys Eco Solutions — Meal Management System</span>
+      <span>Page 8 of 10</span>
+    </div>
+  </div>
+
+  <!-- ================= PAGE 9: MODULE 7 - SYSTEM SETTINGS ================= -->
+  <div class="page">
+    <div>
+      <div class="module-header">
+        <div class="module-title-wrap">
+          <div class="module-num-badge">07</div>
+          <h2 class="module-heading">Master Data & Subsidy Policy Configuration</h2>
+        </div>
+        <div class="module-route">#/admin/settings</div>
+      </div>
+      <div class="trilingual-subtitle">ප්‍රධාන දත්ත සහ සහනාධාර ප්‍රතිපත්ති සැකසුම් | முதன்மை தரவு & மானிய அமைப்புகள்</div>
+
+      <div class="grid-2">
+        <div class="info-card green-accent">
+          <h4>🏷️ Category Subsidy Policy Matrix</h4>
+          <p>Configures company meal subsidy rules that automatically apply during employee booking:</p>
+          <table class="doc-table">
+            <thead>
+              <tr>
+                <th>Meal Category</th>
+                <th>Subsidy Plan</th>
+                <th>Target Employee Group</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Worker</strong></td>
+                <td><span class="pill-tag pill-green">Full Paid</span></td>
+                <td>Plant Operations & Line Staff</td>
+              </tr>
+              <tr>
+                <td><strong>Staff</strong></td>
+                <td><span class="pill-tag pill-amber">Half Paid</span></td>
+                <td>Office & Administrative Staff</td>
+              </tr>
+              <tr>
+                <td><strong>Executive</strong></td>
+                <td><span class="pill-tag pill-green">Full Paid</span></td>
+                <td>Senior Management & Executives</td>
+              </tr>
+              <tr>
+                <td><strong>Visitor</strong></td>
+                <td><span class="pill-tag pill-green">Full Paid</span></td>
+                <td>Official Guests & Auditors</td>
+              </tr>
+              <tr>
+                <td><strong>Contractor</strong></td>
+                <td><span class="pill-tag pill-red">Not Paid</span></td>
+                <td>Third Party & External Contractors</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="info-card">
+          <h4>🏢 Operating Companies & Database Tools</h4>
+          <ul>
+            <li><strong>Operating Companies Tab:</strong> Manage entities under the Hayleys Eco Solutions umbrella (e.g. Hayleys Eco Solutions, Toyo, etc.).</li>
+            <li><strong>Database Tools Tab:</strong> Routine database re-indexing, cache invalidation, and data integrity verification utilities.</li>
+            <li><strong>"Add Category":</strong> Quickly add new employee classifications with custom subsidy entitlement.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="screenshot-container">
+        <img src="screenshots/web7.png" class="screenshot-img" alt="Master Data Settings Screen">
+        <div class="screenshot-caption">Figure 7.1: Master Data & Category Subsidy Configuration Interface (web7.png)</div>
+      </div>
+    </div>
+
+    <div class="page-footer-nav">
+      <span>Hayleys Eco Solutions — Meal Management System</span>
+      <span>Page 9 of 10</span>
+    </div>
+  </div>
+
+  <!-- ================= PAGE 10: APPENDIX & OPERATIONAL CHECKLIST ================= -->
+  <div class="page">
+    <div>
+      <div class="module-header">
+        <div class="module-title-wrap">
+          <div class="module-num-badge">📋</div>
+          <h2 class="module-heading">Daily Operational SOP Checklist & Support Contacts</h2>
+        </div>
+        <div class="module-route">Standard Operating Procedures</div>
+      </div>
+      <div class="trilingual-subtitle">දෛනික මෙහෙයුම් පිරික්සුම් ලැයිස්තුව | தினசரி செயல்பாட்டு சரிபார்ப்பு பட்டியல்</div>
+
+      <div class="info-card green-accent" style="margin-bottom: 12px;">
+        <h4>⏰ Daily Operational Timeline for Catering & Plant Supervisors</h4>
+        <div class="steps-list">
+          <div class="step-item">
+            <span class="step-badge">09:15</span>
+            <div class="step-content"><strong>Breakfast Cutoff Verification:</strong> Review breakfast portions on <em>Dashboard</em>. Click <em>"Export Today's Formatted Excel"</em> on Reports page for kitchen headcount.</div>
+          </div>
+          <div class="step-item">
+            <span class="step-badge">11:15</span>
+            <div class="step-content"><strong>Lunch Cutoff Verification:</strong> Finalize lunch counts immediately after the 11:00 AM cutoff. Dispatch headcount to the central kitchen.</div>
+          </div>
+          <div class="step-item">
+            <span class="step-badge">16:15</span>
+            <div class="step-content"><strong>Dinner Cutoff Verification:</strong> Verify night shift orders after 04:00 PM cutoff. Print the verified delivery sheet.</div>
+          </div>
+          <div class="step-item">
+            <span class="step-badge">23:59</span>
+            <div class="step-content"><strong>Automated Archival:</strong> Nightly cron automatically compiles the 3-day consolidated Excel archive and triggers 1:00 AM storage maintenance.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-equal">
+        <div class="info-card">
+          <h4>💡 Common Troubleshooting Tips</h4>
+          <ul>
+            <li><strong>Order Not Appearing:</strong> Check if the employee confirmed the booking before the slot cutoff time.</li>
+            <li><strong>Duplicate Order Warning:</strong> The system strictly permits one portion per meal slot per day to prevent double-booking.</li>
+            <li><strong>Worker Not Found:</strong> Check the <em>Employees Directory</em> to ensure the employee is registered under active status.</li>
+            <li><strong>Export Excel Failure:</strong> Ensure pop-up blockers are disabled in your browser.</li>
+          </ul>
+        </div>
+
+        <div class="info-card">
+          <h4>📞 Technical Support & Administration Contacts</h4>
+          <table class="doc-table">
+            <tbody>
+              <tr>
+                <td><strong>Plant Operations Helpdesk</strong></td>
+                <td>Internal Ext. 2104 / plant.ops@hayleys.com</td>
+              </tr>
+              <tr>
+                <td><strong>IT Systems Administrator</strong></td>
+                <td>Internal Ext. 3340 / itsupport@hayleys.com</td>
+              </tr>
+              <tr>
+                <td><strong>Catering Contractor Inquiries</strong></td>
+                <td>catering.office@hayleys.com</td>
+              </tr>
+              <tr>
+                <td><strong>System Portal URL</strong></td>
+                <td><code>https://meal-management-project.web.app</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="callout-box" style="margin-top: 10px;">
+        <span>🌿</span>
+        <div>
+          <strong>Hayleys Eco Solutions Commitment:</strong> This digital meal management platform eliminates food waste, optimizes kitchen resource allocation, and ensures fair, transparent nourishment for our entire workforce.
+        </div>
+      </div>
+    </div>
+
+    <div class="page-footer-nav">
+      <span>Hayleys Eco Solutions — Meal Management System</span>
+      <span>Page 10 of 10 • End of Document</span>
+    </div>
+  </div>
+
+</body>
+</html>

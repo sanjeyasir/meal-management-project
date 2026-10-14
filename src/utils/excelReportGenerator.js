@@ -74,7 +74,7 @@ function populateTransactionsSheet(worksheet, {
       item.received === true;
 
     const categoryName = item.category_name || item.category_employment || item.employee_category || "Staff";
-    const masterSubsidy = catMap[categoryName.toLowerCase()] || item.pay_category || item.configuration_detail;
+    const masterSubsidy = item.pay_category || catMap[categoryName.toLowerCase()] || item.configuration_detail;
     const normalizedPayment = normalizePaymentType(masterSubsidy);
 
     const row = worksheet.addRow([

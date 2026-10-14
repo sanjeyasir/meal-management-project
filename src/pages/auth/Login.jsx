@@ -13,9 +13,8 @@ export default function Login() {
   const [errorMsg, setErrorMsg] = useState("");
   const [isGuideOpen, setIsGuideOpen] = useState(false);
 
-  const { loginManual, isAuthenticated, isAdmin } = useAuth();
+  const { loginManual, logout } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
 
   const handleDownloadPdf = () => {
     const link = document.createElement("a");
@@ -26,13 +25,22 @@ export default function Login() {
     document.body.removeChild(link);
   };
 
-  // Redirect to admin dashboard if authenticated
+  // Ensure fresh login: clear any cached credentials/session and blank the form fields
+  // Never auto-redirect to dashboard from cache upon opening the link
   React.useEffect(() => {
-    if (isAuthenticated && isAdmin) {
-      const from = location.state?.from?.pathname || "/admin/dashboard";
-      navigate(from, { replace: true });
+    try {
+      if (typeof sessionStorage !== "undefined") {
+        sessionStorage.removeItem("hayleys_meal_session");
+      }
+      if (typeof localStorage !== "undefined") {
+        localStorage.removeItem("hayleys_meal_session");
+      }
+    } catch {}
+    if (logout) {
+      logout();
     }
-  }, [isAuthenticated, isAdmin, navigate, location]);
+    form.resetFields();
+  }, [form, logout]);
 
   const onFinish = async (values) => {
     setErrorMsg("");
@@ -139,6 +147,8 @@ export default function Login() {
           layout="vertical"
           onFinish={onFinish}
           requiredMark={false}
+          autoComplete="off"
+          initialValues={{ username: "", password: "" }}
         >
           <Form.Item
             name="username"
@@ -150,7 +160,10 @@ export default function Login() {
               placeholder="Enter admin email or username"
               size="large"
               style={{ borderRadius: 10 }}
-              autoComplete="username"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
             />
           </Form.Item>
 
@@ -164,7 +177,7 @@ export default function Login() {
               placeholder="Enter password"
               size="large"
               style={{ borderRadius: 10 }}
-              autoComplete="current-password"
+              autoComplete="new-password"
             />
           </Form.Item>
 

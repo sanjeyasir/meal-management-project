@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { getCurrentUser } from "../services/firebase/authService";
 
 export const useAuthStore = create((set) => ({
-  user: getCurrentUser(),
+  user: null, // Cache should not be used on initial link open / startup
   loading: false,
   middlewareConnected: false,
   
@@ -11,7 +11,14 @@ export const useAuthStore = create((set) => ({
   setMiddlewareConnected: (connected) => set({ middlewareConnected: connected }),
   
   logout: () => {
-    localStorage.removeItem("hayleys_meal_session");
+    try {
+      if (typeof sessionStorage !== "undefined") {
+        sessionStorage.removeItem("hayleys_meal_session");
+      }
+      if (typeof localStorage !== "undefined") {
+        localStorage.removeItem("hayleys_meal_session");
+      }
+    } catch {}
     set({ user: null });
   }
 }));

@@ -39,6 +39,9 @@ import {
 } from "../../services/firebase/mealService";
 import { getCompanies } from "../../services/firebase/companyService";
 import { getCategories, normalizePaymentType } from "../../services/firebase/categoryService";
+import { getEmployees } from "../../services/firebase/employeeService";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "../../services/firebase/config";
 import { generateFormattedMealReport } from "../../utils/excelReportGenerator";
 import { formatSriLankaDateTime } from "../../utils/timeUtils";
 
@@ -50,6 +53,7 @@ export default function ReportsPage() {
   const [allocations, setAllocations] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
@@ -66,14 +70,93 @@ export default function ReportsPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [todayAlloc, allComps, allCats] = await Promise.all([
+      const [todayAlloc, allComps, allCats, allEmps] = await Promise.all([
         getMealAllocations({ date: todayStr }),
         getCompanies(),
-        getCategories()
+        getCategories(),
+        getEmployees()
       ]);
-      setAllocations(todayAlloc);
+
+      // Category config lookup map
+      const catMap = {};
+      (allCats || []).forEach((c) => {
+        if (c.category_name) {
+          catMap[c.category_name.toLowerCase()] = c.configuration_detail;
+        }
+      });
+
+      // Employee lookup map (keyed by lowercase trimmed ID)
+      const empMap = new Map();
+      (allEmps || []).forEach((e) => {
+        const id = String(e.employee_id || e.emp_id || e.id || "").trim().toLowerCase();
+        if (id) empMap.set(id, e);
+      });
+
+      // Map today's allocations from employee details:
+      // company, meal category, and payment plan are mapped from employee master records
+      const mappedAllocations = (todayAlloc || []).map((item) => {
+        const cleanEmpId = String(item.employee_id || item.emp_id || "").trim().toLowerCase();
+        const emp = empMap.get(cleanEmpId);
+
+        const mappedName = emp?.name || emp?.full_name || item.employee_name || item.name || "Employee";
+        const mappedCompany = emp?.company || item.company || "Hayleys Eco Solutions";
+        const mappedCategory = emp?.category_employment || emp?.category_name || item.category_name || item.category_employment || "Staff";
+
+        // Payment plan mapping: prioritize employee's pay_category, then category config, then item pay_category
+        const resolvedPay = emp?.pay_category
+          ? normalizePaymentType(emp.pay_category)
+          : (catMap[mappedCategory.toLowerCase()]
+              ? normalizePaymentType(catMap[mappedCategory.toLowerCase()])
+              : normalizePaymentType(item.pay_category || "Full Paid"));
+
+        const mappedDesignation = emp?.designation || item.current_designation || item.designation || "Staff";
+        const mappedSection = emp?.section || emp?.department || item.section || item.department || "Operations";
+
+        return {
+          ...item,
+          employee_name: mappedName,
+          name: mappedName,
+          company: mappedCompany,
+          category_name: mappedCategory,
+          category_employment: mappedCategory,
+          pay_category: resolvedPay,
+          designation: mappedDesignation,
+          current_designation: mappedDesignation,
+          section: mappedSection,
+          department: mappedSection
+        };
+      });
+
+      setAllocations(mappedAllocations);
       setCompanies(allComps);
       setCategories(allCats);
+      setEmployees(allEmps);
+
+      // Background synchronization: ensure Firestore documents have fresh mapped values
+      mappedAllocations.forEach(async (m) => {
+        const orig = (todayAlloc || []).find((t) => t.id === m.id);
+        if (
+          orig &&
+          (orig.company !== m.company ||
+            orig.category_name !== m.category_name ||
+            normalizePaymentType(orig.pay_category) !== m.pay_category ||
+            orig.employee_name !== m.employee_name)
+        ) {
+          try {
+            await updateDoc(doc(db, "meal_allocations", m.id), {
+              employee_name: m.employee_name,
+              name: m.employee_name,
+              company: m.company,
+              category_name: m.category_name,
+              category_employment: m.category_employment,
+              pay_category: m.pay_category,
+              updated_at: new Date().toISOString()
+            });
+          } catch (syncErr) {
+            // Ignore background sync errors
+          }
+        }
+      });
     } catch (err) {
       console.error("Error loading today's allocations:", err);
       message.error("Failed to load today's allocations.");
@@ -99,9 +182,7 @@ export default function ReportsPage() {
 
   // Helper to get auto-resolved payment plan
   const getAutoSubsidy = (item) => {
-    const catName = (item.category_name || item.category_employment || item.employee_category || "Staff").trim();
-    const masterSubsidy = categoryMap[catName.toLowerCase()] || item.pay_category || item.configuration_detail;
-    return normalizePaymentType(masterSubsidy);
+    return normalizePaymentType(item.pay_category);
   };
 
   // Handle Delete Allocation for Today

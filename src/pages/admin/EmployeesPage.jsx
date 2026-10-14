@@ -40,7 +40,7 @@ import {
   deleteEmployee,
   isEmployeeIdUnique
 } from "../../services/firebase/employeeService";
-import { getCategories, normalizePaymentType } from "../../services/firebase/categoryService";
+import { getCategories, normalizePaymentType, ALLOWED_PAYMENT_TYPES } from "../../services/firebase/categoryService";
 import { getCompanies } from "../../services/firebase/companyService";
 import {
   downloadEmployeeTemplate,
@@ -96,6 +96,16 @@ export default function EmployeesPage() {
     loadData();
   }, []);
 
+  // When meal category changes in the form, automatically update the payment plan to that category's default
+  const handleCategoryChange = (catName) => {
+    const match = categories.find((c) => c.category_name?.toLowerCase() === (catName || "").toLowerCase());
+    if (match && match.configuration_detail) {
+      form.setFieldsValue({
+        pay_category: normalizePaymentType(match.configuration_detail)
+      });
+    }
+  };
+
   // Sync Form values whenever modal opens or editing record changes
   useEffect(() => {
     if (modalOpen) {
@@ -104,17 +114,22 @@ export default function EmployeesPage() {
           employee_id: editingEmployee.employee_id || editingEmployee.id || "",
           name: editingEmployee.name || "",
           designation: editingEmployee.designation || "Staff",
+          company: editingEmployee.company || (companies[0]?.name || "Hayleys Eco Solutions"),
           category_employment: editingEmployee.category_employment || editingEmployee.category_name || "Staff",
-          company: editingEmployee.company || (companies[0]?.name || "Hayleys Eco Solutions")
+          pay_category: normalizePaymentType(editingEmployee.pay_category || editingEmployee.category_employment)
         });
       } else {
+        const defaultCat = categories[1]?.category_name || categories[0]?.category_name || "Staff";
+        const catObj = categories.find((c) => c.category_name === defaultCat);
+        const defaultPay = catObj?.configuration_detail ? normalizePaymentType(catObj.configuration_detail) : "Half Paid";
         form.resetFields();
         form.setFieldsValue({
           employee_id: "",
           name: "",
           designation: "Staff",
-          category_employment: categories[1]?.category_name || "Staff",
-          company: companies[0]?.name || "Hayleys Eco Solutions"
+          company: companies[0]?.name || "Hayleys Eco Solutions",
+          category_employment: defaultCat,
+          pay_category: defaultPay
         });
       }
     }
@@ -142,7 +157,8 @@ export default function EmployeesPage() {
         {
           ...editingEmployee,
           ...values,
-          employee_id: cleanNewId
+          employee_id: cleanNewId,
+          pay_category: normalizePaymentType(values.pay_category)
         },
         originalId
       );
@@ -487,17 +503,32 @@ export default function EmployeesPage() {
             <Input placeholder="e.g. Quality Assurance Lead, Production Supervisor" />
           </Form.Item>
 
+          <Form.Item
+            name="company"
+            label={<span style={{ fontWeight: 600, color: "#0f172a" }}>Company / Plant</span>}
+            rules={[{ required: true, message: "Please select operating company" }]}
+          >
+            <Select placeholder="Select operating company">
+              {companies.map((comp) => (
+                <Option key={comp.name} value={comp.name}>
+                  {comp.name}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+
           <Row gutter={16}>
             <Col xs={24} sm={12}>
               <Form.Item
                 name="category_employment"
                 label={<span style={{ fontWeight: 600, color: "#0f172a" }}>Meal Category</span>}
                 rules={[{ required: true, message: "Please select meal category" }]}
+                tooltip="Select employee tier. Selecting a category automatically suggests the default payment plan."
               >
-                <Select placeholder="Select category">
+                <Select placeholder="Select category" onChange={handleCategoryChange}>
                   {categories.map((c) => (
                     <Option key={c.category_name} value={c.category_name}>
-                      {c.category_name} ({c.configuration_detail})
+                      {c.category_name}
                     </Option>
                   ))}
                 </Select>
@@ -506,14 +537,15 @@ export default function EmployeesPage() {
 
             <Col xs={24} sm={12}>
               <Form.Item
-                name="company"
-                label={<span style={{ fontWeight: 600, color: "#0f172a" }}>Company / Plant</span>}
-                rules={[{ required: true, message: "Please select company" }]}
+                name="pay_category"
+                label={<span style={{ fontWeight: 600, color: "#0f172a" }}>Payment Plan</span>}
+                rules={[{ required: true, message: "Please select payment plan" }]}
+                tooltip="Specific meal payment subsidy for this employee (Full Paid, Half Paid, or Not Paid)."
               >
-                <Select placeholder="Select operating company">
-                  {companies.map((comp) => (
-                    <Option key={comp.name} value={comp.name}>
-                      {comp.name}
+                <Select placeholder="Select payment plan">
+                  {ALLOWED_PAYMENT_TYPES.map((pt) => (
+                    <Option key={pt} value={pt}>
+                      {pt}
                     </Option>
                   ))}
                 </Select>

@@ -32,6 +32,7 @@ import {
 } from "../../services/firebase/mealService";
 import { getCompanies } from "../../services/firebase/companyService";
 import { normalizePaymentType, getCategories } from "../../services/firebase/categoryService";
+import { getEmployees } from "../../services/firebase/employeeService";
 import { generateFormattedMealReport } from "../../utils/excelReportGenerator";
 import { formatSriLankaDateTime } from "../../utils/timeUtils";
 
@@ -59,14 +60,51 @@ export default function AllAllocationsPage() {
   const loadAllocations = async () => {
     setLoading(true);
     try {
-      const [allData, allComps, allCats] = await Promise.all([
+      const [allData, allComps, allCats, allEmps] = await Promise.all([
         getMealAllocationsWithArchived(),
         getCompanies(),
-        getCategories()
+        getCategories(),
+        getEmployees()
       ]);
 
+      const catMap = {};
+      (allCats || []).forEach((c) => {
+        if (c.category_name) {
+          catMap[c.category_name.toLowerCase()] = c.configuration_detail;
+        }
+      });
+
+      const empMap = new Map();
+      (allEmps || []).forEach((e) => {
+        const id = String(e.employee_id || e.emp_id || e.id || "").trim().toLowerCase();
+        if (id) empMap.set(id, e);
+      });
+
+      const mappedAllocations = (allData || []).map((item) => {
+        const cleanEmpId = String(item.employee_id || item.emp_id || "").trim().toLowerCase();
+        const emp = empMap.get(cleanEmpId);
+        const mappedName = emp?.name || emp?.full_name || item.employee_name || item.name || "Employee";
+        const mappedCompany = emp?.company || item.company || "Hayleys Eco Solutions";
+        const mappedCategory = emp?.category_employment || emp?.category_name || item.category_name || item.category_employment || "Staff";
+        const resolvedPay = emp?.pay_category
+          ? normalizePaymentType(emp.pay_category)
+          : (catMap[mappedCategory.toLowerCase()]
+              ? normalizePaymentType(catMap[mappedCategory.toLowerCase()])
+              : normalizePaymentType(item.pay_category || "Full Paid"));
+
+        return {
+          ...item,
+          employee_name: mappedName,
+          name: mappedName,
+          company: mappedCompany,
+          category_name: mappedCategory,
+          category_employment: mappedCategory,
+          pay_category: resolvedPay
+        };
+      });
+
       // Filter entries to come from previous days (archived historical allocations where date < today)
-      const pastAllocations = allData.filter((item) => item.date && item.date < todayStr);
+      const pastAllocations = mappedAllocations.filter((item) => item.date && item.date < todayStr);
       setAllocations(pastAllocations);
       setCompanies(allComps);
       setCategories(allCats);
@@ -94,9 +132,7 @@ export default function AllAllocationsPage() {
   }, [categories]);
 
   const getAutoSubsidy = (item) => {
-    const catName = (item.category_name || item.category_employment || "Staff").trim();
-    const masterSubsidy = categoryMap[catName.toLowerCase()] || item.pay_category;
-    return normalizePaymentType(masterSubsidy);
+    return normalizePaymentType(item.pay_category);
   };
 
   // Filter allocations

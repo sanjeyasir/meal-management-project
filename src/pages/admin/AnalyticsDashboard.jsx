@@ -39,7 +39,25 @@ export default function AnalyticsDashboard() {
         getMealAllocations(),
         getEmployees()
       ]);
-      setAllocations(allAlloc);
+
+      const empMap = new Map();
+      (emps || []).forEach((e) => {
+        const id = String(e.employee_id || e.emp_id || e.id || "").trim().toLowerCase();
+        if (id) empMap.set(id, e);
+      });
+
+      const mapped = (allAlloc || []).map((a) => {
+        const emp = empMap.get(String(a.employee_id || a.emp_id || "").trim().toLowerCase());
+        return {
+          ...a,
+          employee_name: emp?.name || a.employee_name || a.name,
+          company: emp?.company || a.company,
+          category_name: emp?.category_employment || emp?.category_name || a.category_name,
+          pay_category: emp?.pay_category ? normalizePaymentType(emp.pay_category) : normalizePaymentType(a.pay_category)
+        };
+      });
+
+      setAllocations(mapped);
       setEmployees(emps);
     } catch (err) {
       console.error("Error loading analytics data:", err);

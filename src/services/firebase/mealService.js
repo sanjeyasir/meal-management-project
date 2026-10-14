@@ -82,15 +82,20 @@ export async function createMealOrder(payCategory, orderDetails, createdBy) {
             const allocationId = `${empId}_${dayStr}_${mealType}`.replace(/\s+/g, "_");
             const docRef = doc(db, COLLECTION_NAME, allocationId);
 
+            const categoryName = orderDetails.category_name || orderDetails.category_employment || "Staff";
             const payload = {
               id: allocationId,
               employee_id: empId,
+              emp_id: empId,
               employee_name: empName,
+              name: empName,
               company,
               section,
               date: dayStr,
               meal_type: mealType,
-              pay_category: payCategory || "Free Meal",
+              category_name: categoryName,
+              category_employment: categoryName,
+              pay_category: payCategory || "Full Paid",
               status: "Ordered",
               created_at: new Date().toISOString(),
               created_by: createdBy || empName,

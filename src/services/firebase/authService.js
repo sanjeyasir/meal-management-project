@@ -5,6 +5,15 @@ import { getCategoryByName, seedDefaultCategories } from "./categoryService.js";
 
 const SESSION_KEY = "hayleys_meal_session";
 
+// Immediately clear any persistent cache from localStorage to ensure fresh manual login
+try {
+  if (typeof localStorage !== "undefined") {
+    localStorage.removeItem(SESSION_KEY);
+  }
+} catch (e) {
+  // Ignore
+}
+
 /**
  * Friendly error message resolver for Firebase Auth
  */
@@ -141,7 +150,9 @@ export async function loginWithBiometric(rawPayload) {
     loginTime: new Date().toISOString()
   };
 
-  localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
+  try {
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
+  } catch {}
   return sessionData;
 }
 
@@ -189,7 +200,9 @@ export async function loginManual(username, password) {
         loginTime: new Date().toISOString()
       };
 
-      localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
+      try {
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
+      } catch {}
       return sessionData;
     } catch (fbErr) {
       console.warn("[Firebase Auth] Login error:", fbErr.code, fbErr.message);
@@ -217,7 +230,9 @@ export async function loginManual(username, password) {
           loginMethod: "CREDENTIALS",
           loginTime: new Date().toISOString()
         };
-        localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
+        try {
+          sessionStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
+        } catch {}
         return sessionData;
       }
 
@@ -243,7 +258,9 @@ export async function loginManual(username, password) {
       loginMethod: "CREDENTIALS",
       loginTime: new Date().toISOString()
     };
-    localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
+    try {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
+    } catch {}
     return sessionData;
   }
 
@@ -272,7 +289,9 @@ export async function selectEmployeeSession(employee) {
     loginTime: new Date().toISOString()
   };
 
-  localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
+  try {
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
+  } catch {}
   return sessionData;
 }
 
@@ -281,12 +300,17 @@ export async function selectEmployeeSession(employee) {
  */
 export function getCurrentUser() {
   try {
-    const raw = localStorage.getItem(SESSION_KEY);
+    if (typeof localStorage !== "undefined") {
+      localStorage.removeItem(SESSION_KEY);
+    }
+    const raw = typeof sessionStorage !== "undefined" ? sessionStorage.getItem(SESSION_KEY) : null;
     if (!raw) return null;
     const session = JSON.parse(raw);
     if (session && (session.employee_id === "1" || session.name === "Admin" || session.isAdmin) && session.employee_id === "1") {
       session.employee_id = "admin";
-      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+      try {
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+      } catch {}
     }
     return session;
   } catch {
@@ -303,7 +327,14 @@ export async function logoutUser() {
   } catch (err) {
     console.warn("[Firebase Auth] Error signing out:", err);
   }
-  localStorage.removeItem(SESSION_KEY);
+  try {
+    if (typeof sessionStorage !== "undefined") {
+      sessionStorage.removeItem(SESSION_KEY);
+    }
+    if (typeof localStorage !== "undefined") {
+      localStorage.removeItem(SESSION_KEY);
+    }
+  } catch {}
 }
 
 /**

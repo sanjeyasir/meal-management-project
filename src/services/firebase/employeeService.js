@@ -262,11 +262,15 @@ export async function saveEmployee(employee, originalEmployeeId = null) {
   const firstName = employee.first_name || (fullName ? fullName.split(" ")[0] : "Employee");
   const lastName = employee.last_name || (fullName && fullName.split(" ").length > 1 ? fullName.split(" ").slice(1).join(" ") : cleanId);
 
-  const resolvedCatName = String(employee.category_employment || employee.category_name || employee.pay_category || "Staff").trim();
+  const resolvedCatName = String(employee.category_employment || employee.category_name || "Staff").trim();
   const categoryConfig = await getCategoryByName(resolvedCatName);
-  const resolvedSubsidy = categoryConfig?.configuration_detail
-    ? normalizePaymentType(categoryConfig.configuration_detail)
-    : normalizePaymentType(employee.pay_category || "Full Paid");
+  
+  // Honor explicit pay_category if chosen; otherwise resolve from category configuration
+  const resolvedSubsidy = employee.pay_category
+    ? normalizePaymentType(employee.pay_category)
+    : (categoryConfig?.configuration_detail
+        ? normalizePaymentType(categoryConfig.configuration_detail)
+        : "Full Paid");
 
   const payload = {
     ...employee,
@@ -282,9 +286,33 @@ export async function saveEmployee(employee, originalEmployeeId = null) {
     category_employment: resolvedCatName,
     category_name: resolvedCatName,
     pay_category: resolvedSubsidy,
-    status: "Active",
-    is_active: true,
+    status: employee.status || "Active",
+    is_active: employee.is_active !== false,
     updated_at: new Date().toISOString()
+  };
+
+  // Safe allocation update data generator (avoid undefined properties in Firestore)
+  const buildAllocationUpdate = (isIdChange = false) => {
+    const data = {
+      employee_name: payload.name,
+      name: payload.name,
+      company: payload.company,
+      category_name: payload.category_employment,
+      category_employment: payload.category_employment,
+      pay_category: payload.pay_category,
+      updated_at: new Date().toISOString()
+    };
+    if (isIdChange) {
+      data.employee_id = cleanId;
+      data.emp_id = cleanId;
+    }
+    if (payload.designation) {
+      data.current_designation = payload.designation;
+      data.designation = payload.designation;
+    }
+    if (payload.section) data.section = payload.section;
+    if (payload.department) data.department = payload.department;
+    return data;
   };
 
   // If this is an update where the employee_id itself was changed
@@ -307,55 +335,49 @@ export async function saveEmployee(employee, originalEmployeeId = null) {
 
     // 3. Cascade update existing meal allocations to the new employee ID
     try {
-      const allocQuery = query(collection(db, "meal_allocations"), where("employee_id", "==", cleanOriginal));
-      const allocSnap = await getDocs(allocQuery);
-      if (!allocSnap.empty) {
+      const q1 = query(collection(db, "meal_allocations"), where("employee_id", "==", cleanOriginal));
+      const q2 = query(collection(db, "meal_allocations"), where("emp_id", "==", cleanOriginal));
+      const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+
+      const docMap = new Map();
+      snap1.docs.forEach((d) => docMap.set(d.id, d));
+      snap2.docs.forEach((d) => docMap.set(d.id, d));
+
+      if (docMap.size > 0) {
         const batch = writeBatch(db);
-        allocSnap.docs.forEach((d) => {
-          batch.update(d.ref, {
-            employee_id: cleanId,
-            emp_id: cleanId,
-            employee_name: payload.name,
-            name: payload.name,
-            current_designation: payload.designation,
-            company: payload.company,
-            section: payload.section,
-            department: payload.department,
-            category_name: payload.category_employment,
-            category_employment: payload.category_employment,
-            pay_category: payload.pay_category,
-            updated_at: new Date().toISOString()
-          });
+        const updateObj = buildAllocationUpdate(true);
+        docMap.forEach((d) => {
+          batch.update(d.ref, updateObj);
         });
         await batch.commit();
+        console.log(`[EmployeeService] Cascaded ID update to ${docMap.size} meal allocations.`);
       }
     } catch (allocErr) {
-      console.warn("Notice: Failed cascading update to meal allocations:", allocErr);
+      console.warn("Notice: Failed cascading update to meal allocations on ID change:", allocErr);
     }
   } else {
     // Normal create or in-place update
     const docRef = doc(db, COLLECTION_NAME, cleanId);
     await setDoc(docRef, payload, { merge: true });
 
-    // Cascade update allocations for this employee to keep category/subsidy fresh
+    // Cascade update allocations for this employee to keep company, meal category, and payment plan fresh
     try {
-      const allocQuery = query(collection(db, "meal_allocations"), where("employee_id", "==", cleanId));
-      const allocSnap = await getDocs(allocQuery);
-      if (!allocSnap.empty) {
+      const q1 = query(collection(db, "meal_allocations"), where("employee_id", "==", cleanId));
+      const q2 = query(collection(db, "meal_allocations"), where("emp_id", "==", cleanId));
+      const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+
+      const docMap = new Map();
+      snap1.docs.forEach((d) => docMap.set(d.id, d));
+      snap2.docs.forEach((d) => docMap.set(d.id, d));
+
+      if (docMap.size > 0) {
         const batch = writeBatch(db);
-        allocSnap.docs.forEach((d) => {
-          batch.update(d.ref, {
-            employee_name: payload.name,
-            name: payload.name,
-            section: payload.section,
-            department: payload.department,
-            category_name: payload.category_employment,
-            category_employment: payload.category_employment,
-            pay_category: payload.pay_category,
-            updated_at: new Date().toISOString()
-          });
+        const updateObj = buildAllocationUpdate(false);
+        docMap.forEach((d) => {
+          batch.update(d.ref, updateObj);
         });
         await batch.commit();
+        console.log(`[EmployeeService] Cascaded company/category/pay updates to ${docMap.size} meal allocations for ${cleanId}.`);
       }
     } catch (allocErr) {
       console.warn("Notice: Failed cascading allocation update:", allocErr);

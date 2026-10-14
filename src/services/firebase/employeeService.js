@@ -20,7 +20,7 @@ export const DEFAULT_EMPLOYEES = [
     designation: "Production Supervisor",
     company: "Hayleys Fibre Plant 1",
     category_employment: "Worker",
-    pay_category: "Full Paid",
+    pay_category: "Half Paid",
     status: "Active"
   },
   {
@@ -29,7 +29,7 @@ export const DEFAULT_EMPLOYEES = [
     designation: "Plant General Manager",
     company: "Hayleys Eco Solutions",
     category_employment: "Executive",
-    pay_category: "Full Paid",
+    pay_category: "Half Paid",
     status: "Active"
   },
   {
@@ -38,7 +38,7 @@ export const DEFAULT_EMPLOYEES = [
     designation: "Maintenance Technician",
     company: "Hayleys Fibre Plant 1",
     category_employment: "Worker",
-    pay_category: "Full Paid",
+    pay_category: "Half Paid",
     status: "Active"
   },
   {
@@ -56,7 +56,7 @@ export const DEFAULT_EMPLOYEES = [
     designation: "Admin",
     company: "Hayleys Eco Solutions",
     category_employment: "Executive",
-    pay_category: "Full Paid",
+    pay_category: "Half Paid",
     status: "Active"
   }
 ];
@@ -182,7 +182,8 @@ export async function getEmployees() {
       const lastName = data.last_name || (fullName && fullName.split(" ").length > 1 ? fullName.split(" ").slice(1).join(" ") : empId);
       const section = data.section || data.department || "Operations";
       const department = data.department || data.section || "Operations";
-      const category = data.category_employment || data.pay_category || "Staff";
+      const category = data.category_employment || data.category_name || "Staff";
+      const payCategory = data.pay_category ? normalizePaymentType(data.pay_category) : "Half Paid";
       const status = data.status || (data.is_active !== false ? "Active" : "Inactive");
 
       return {
@@ -198,7 +199,8 @@ export async function getEmployees() {
         section,
         department,
         category_employment: category,
-        pay_category: category,
+        category_name: category,
+        pay_category: payCategory,
         status,
         is_active: status === "Active"
       };

@@ -6,12 +6,13 @@ const COLLECTION_NAME = "employee_categories";
 export const ALLOWED_PAYMENT_TYPES = ["Half Paid", "Full Paid", "Not Paid"];
 
 export function normalizePaymentType(type) {
-  if (!type) return "Full Paid";
+  if (!type) return "Half Paid";
   const lower = String(type).trim().toLowerCase();
   if (lower.includes("half") || lower.includes("50%")) return "Half Paid";
   if (lower.includes("not") || lower.includes("unpaid") || lower.includes("none") || lower === "contractor") return "Not Paid";
   if (lower.includes("full") || lower.includes("free") || lower.includes("100%")) return "Full Paid";
-  return "Full Paid";
+  if (lower === "staff") return "Half Paid";
+  return "Half Paid";
 }
 
 export const DEFAULT_CATEGORIES = [

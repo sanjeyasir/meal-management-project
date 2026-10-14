@@ -1,11 +1,11 @@
 import React, { useState } from "react";
-import { Form, Input, Button, Card, Typography, Alert, Avatar, Modal, Divider, Space, Collapse } from "antd";
-import { UserOutlined, LockOutlined, ArrowRightOutlined, BookOutlined, FilePdfOutlined, CheckCircleOutlined } from "@ant-design/icons";
+import { Form, Input, Button, Card, Typography, Alert, Avatar, Modal } from "antd";
+import { UserOutlined, LockOutlined, ArrowRightOutlined, BookOutlined } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import PortalUserGuide from "../../components/guide/PortalUserGuide";
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 
 export default function Login() {
   const [form] = Form.useForm();
@@ -188,104 +188,6 @@ export default function Login() {
               Sign In to Management Portal
             </Button>
           </Form.Item>
-
-          <Divider style={{ margin: "20px 0 16px", borderColor: "#e2e8f0" }}>
-            <Text type="secondary" style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: "#64748b" }}>
-              User Documentation & Manual
-            </Text>
-          </Divider>
-
-          {/* User Guide Card inside Form before Login */}
-          <div
-            style={{
-              background: "linear-gradient(145deg, #f0fdf4 0%, #ecfdf5 100%)",
-              border: "1.5px solid #a7f3d0",
-              borderRadius: 14,
-              padding: "14px",
-              textAlign: "center",
-              boxShadow: "0 2px 8px rgba(16, 185, 129, 0.08)"
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 4 }}>
-              <span style={{ fontSize: 16 }}>🌿</span>
-              <Text strong style={{ color: "#065f46", fontSize: 13 }}>
-                Web Portal User Guide
-              </Text>
-            </div>
-            <Text style={{ fontSize: 11, color: "#475569", display: "block", marginBottom: 12 }}>
-              පරිශීලක මාර්ගෝපදේශය • பயனர் வழிகாட்டி
-            </Text>
-
-            <Space size="small" style={{ width: "100%", justifyContent: "center", flexWrap: "wrap", marginBottom: 10 }}>
-              <Button
-                type="primary"
-                size="middle"
-                icon={<BookOutlined />}
-                onClick={() => setIsGuideOpen(true)}
-                style={{
-                  background: "#15803d",
-                  borderColor: "#15803d",
-                  fontWeight: 600,
-                  fontSize: 12.5,
-                  borderRadius: 8
-                }}
-              >
-                View Guide (HTML)
-              </Button>
-
-              <Button
-                size="middle"
-                icon={<FilePdfOutlined />}
-                onClick={handleDownloadPdf}
-                style={{
-                  borderColor: "#86efac",
-                  color: "#166534",
-                  fontWeight: 600,
-                  fontSize: 12.5,
-                  borderRadius: 8,
-                  background: "#ffffff"
-                }}
-              >
-                PDF Manual (4 MB)
-              </Button>
-            </Space>
-
-            <Collapse
-              ghost
-              size="small"
-              items={[
-                {
-                  key: "1",
-                  label: (
-                    <Text style={{ fontSize: 11.5, color: "#166534", fontWeight: 600 }}>
-                      ⚡ Quick 7 Modules Summary
-                    </Text>
-                  ),
-                  children: (
-                    <div style={{ textAlign: "left", fontSize: 11, color: "#334155", lineHeight: 1.6 }}>
-                      <div>1️⃣ <strong>Secure Login:</strong> Role-based access (<code>#/admin/login</code>)</div>
-                      <div>2️⃣ <strong>Dashboard:</strong> Live scheduled, dispensed & workforce count</div>
-                      <div>3️⃣ <strong>Today's Reports:</strong> Active orders, filters & Formatted Excel</div>
-                      <div>4️⃣ <strong>Previous Day:</strong> Historical audits & date-range lookup</div>
-                      <div>5️⃣ <strong>Daily Archives:</strong> 3-day consolidated cloud workbooks</div>
-                      <div>6️⃣ <strong>Employees:</strong> 579+ workforce directory & Excel bulk sync</div>
-                      <div>7️⃣ <strong>Settings:</strong> Subsidy policies (Full/Half/None) & company master data</div>
-                      <div style={{ marginTop: 8, textAlign: "center" }}>
-                        <Button
-                          type="link"
-                          size="small"
-                          onClick={() => setIsGuideOpen(true)}
-                          style={{ padding: 0, fontSize: 11, fontWeight: 700, color: "#15803d" }}
-                        >
-                          Open Detailed Guide with Screenshots &rarr;
-                        </Button>
-                      </div>
-                    </div>
-                  )
-                }
-              ]}
-            />
-          </div>
         </Form>
       </Card>
 

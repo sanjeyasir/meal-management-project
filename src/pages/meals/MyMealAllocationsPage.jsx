@@ -11,6 +11,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { getMealAllocations, deleteMealAllocation, formatDateKey } from "../../services/firebase/mealService";
+import { formatSriLankaDateTime } from "../../utils/timeUtils";
 
 const { Title, Text } = Typography;
 
@@ -59,7 +60,7 @@ export default function MyMealAllocationsPage() {
 
   const columns = [
     {
-      title: "Date",
+      title: "Allocation Date",
       dataIndex: "date",
       key: "date",
       render: (d) => <Text strong style={{ fontSize: 14 }}>{d}</Text>,
@@ -100,6 +101,7 @@ export default function MyMealAllocationsPage() {
       title: "Status",
       dataIndex: "status",
       key: "status",
+      width: 120,
       render: (s) => (
         <Tag
           icon={s === "Recieved" ? <CheckCircleOutlined /> : <ClockCircleOutlined />}
@@ -116,8 +118,22 @@ export default function MyMealAllocationsPage() {
       onFilter: (value, record) => record.status === value
     },
     {
+      title: "Ordered Date & Time",
+      dataIndex: "created_at",
+      key: "created_at",
+      width: 190,
+      render: (dt, r) => (
+        <span style={{ color: "#334155", fontSize: "0.85rem", fontWeight: 600 }}>
+          {formatSriLankaDateTime(dt || r.timestamp)}
+        </span>
+      ),
+      sorter: (a, b) => new Date(a.created_at || a.timestamp || 0) - new Date(b.created_at || b.timestamp || 0)
+    },
+    {
       title: "Actions",
       key: "actions",
+      width: 110,
+      fixed: "right",
       render: (_, record) => (
         record.status === "Ordered" ? (
           <Popconfirm
@@ -183,6 +199,7 @@ export default function MyMealAllocationsPage() {
           rowKey="id"
           loading={loading}
           pagination={{ pageSize: 10, showSizeChanger: true }}
+          scroll={{ x: 800 }}
         />
       </Card>
     </div>

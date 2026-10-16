@@ -255,10 +255,10 @@ export default function AllocationsEditPage() {
   // Desktop Table Columns (Consistent across all allocation master tables)
   const tableColumns = [
     {
-      title: "Date",
+      title: "Allocation Date",
       dataIndex: "date",
       key: "date",
-      width: 115,
+      width: 135,
       fixed: "left",
       render: (d) => <Text strong style={{ color: "#0f172a" }}>{d}</Text>,
       sorter: (a, b) => (a.date || "").localeCompare(b.date || "")
@@ -346,15 +346,16 @@ export default function AllocationsEditPage() {
       }
     },
     {
-      title: "Created At (SL Time)",
+      title: "Ordered Date & Time (SL Time)",
       dataIndex: "created_at",
       key: "created_at",
-      width: 180,
-      render: (dt) => (
-        <span style={{ fontSize: "0.85rem", color: "#475569" }}>
-          {formatSriLankaDateTime(dt)}
+      width: 190,
+      render: (dt, r) => (
+        <span style={{ fontSize: "0.85rem", color: "#334155", fontWeight: 600 }}>
+          {formatSriLankaDateTime(dt || r.timestamp)}
         </span>
-      )
+      ),
+      sorter: (a, b) => new Date(a.created_at || a.timestamp || 0) - new Date(b.created_at || b.timestamp || 0)
     },
     {
       title: "Actions",
@@ -661,7 +662,7 @@ export default function AllocationsEditPage() {
 
                   {/* Timestamp info */}
                   <div style={{ fontSize: "0.75rem", color: "#64748b", background: "#f8fafc", padding: "6px 10px", borderRadius: 8, marginBottom: 14 }}>
-                    <div>📅 Created: {formatSriLankaDateTime(item.created_at)}</div>
+                    <div>📅 Ordered Date & Time: {formatSriLankaDateTime(item.created_at || item.timestamp)}</div>
                     {item.received_at && (
                       <div style={{ color: "#059669", fontWeight: 600, marginTop: 2 }}>
                         ✅ Dispensed: {formatSriLankaDateTime(item.received_at)}

@@ -285,6 +285,19 @@ export default function ReportsPage() {
   // Table Columns with Ordered Time, Received Time, and Delete Feature
   const columns = [
     {
+      title: "Allocation Date",
+      dataIndex: "date",
+      key: "date",
+      width: 140,
+      fixed: "left",
+      render: (d, r) => (
+        <span style={{ fontWeight: 800, color: "#0f172a" }}>
+          {d || r.date || todayStr}
+        </span>
+      ),
+      sorter: (a, b) => (b.date || "").localeCompare(a.date || "")
+    },
+    {
       title: "Employee ID",
       dataIndex: "employee_id",
       key: "employee_id",
@@ -363,11 +376,12 @@ export default function ReportsPage() {
       }
     },
     {
-      title: "Ordered Time (SL Time)",
+      title: "Ordered Date & Time (SL Time)",
       dataIndex: "created_at",
       key: "created_at",
-      width: 170,
-      render: (dt) => <span style={{ color: "#334155", fontSize: "0.85rem", fontWeight: 600 }}>{formatSriLankaDateTime(dt)}</span>
+      width: 190,
+      render: (dt, r) => <span style={{ color: "#334155", fontSize: "0.85rem", fontWeight: 600 }}>{formatSriLankaDateTime(dt || r.timestamp)}</span>,
+      sorter: (a, b) => new Date(a.created_at || a.timestamp || 0) - new Date(b.created_at || b.timestamp || 0)
     },
     {
       title: "Received Time (SL Time)",
@@ -612,7 +626,7 @@ export default function ReportsPage() {
           columns={columns}
           rowKey="id"
           loading={loading}
-          scroll={{ x: 1200 }}
+          scroll={{ x: 1350 }}
           pagination={{
             pageSize: 15,
             showSizeChanger: true,

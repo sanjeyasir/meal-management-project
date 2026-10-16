@@ -42,7 +42,7 @@ function populateTransactionsSheet(worksheet, {
     "Payment Plan",
     "Meal Slot",
     "Status",
-    "Created At (Sri Lanka Time)",
+    "Ordered Date & Time (Sri Lanka Time)",
     "Dispensed At (Sri Lanka Time)"
   ];
 

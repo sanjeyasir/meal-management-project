@@ -366,6 +366,14 @@ export default function DailyArchivedReportsPage() {
   // Drawer Table Columns
   const detailColumns = [
     {
+      title: "Allocation Date",
+      dataIndex: "date",
+      key: "date",
+      width: 135,
+      render: (d) => <span style={{ fontWeight: 800, color: "#0f172a" }}>{d || selectedReport?.date}</span>,
+      sorter: (a, b) => (b.date || "").localeCompare(a.date || "")
+    },
+    {
       title: "Employee ID",
       dataIndex: "employee_id",
       key: "employee_id",
@@ -417,10 +425,27 @@ export default function DailyArchivedReportsPage() {
       }
     },
     {
+      title: "Ordered Date & Time (SL Time)",
+      dataIndex: "created_at",
+      key: "created_at",
+      width: 190,
+      render: (dt, r) => (
+        <span style={{ color: "#334155", fontSize: "0.85rem", fontWeight: 600 }}>
+          {formatSriLankaDateTime(dt || r.timestamp)}
+        </span>
+      ),
+      sorter: (a, b) => new Date(a.created_at || a.timestamp || 0) - new Date(b.created_at || b.timestamp || 0)
+    },
+    {
       title: "Dispensed (SL Time)",
       dataIndex: "received_at",
       key: "received_at",
-      render: (t) => formatSriLankaDateTime(t)
+      width: 190,
+      render: (t) => (
+        <span style={{ color: "#059669", fontSize: "0.85rem", fontWeight: 600 }}>
+          {formatSriLankaDateTime(t)}
+        </span>
+      )
     }
   ];
 
@@ -900,7 +925,7 @@ export default function DailyArchivedReportsPage() {
               loading={loadingDetails}
               pagination={{ pageSize: 10 }}
               size="small"
-              scroll={{ x: 800 }}
+              scroll={{ x: 1050 }}
             />
           </div>
         )}

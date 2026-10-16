@@ -313,11 +313,12 @@ export default function AllAllocationsPage() {
       }
     },
     {
-      title: "Ordered Time (SL Time)",
+      title: "Ordered Date & Time (SL Time)",
       dataIndex: "created_at",
       key: "created_at",
-      width: 170,
-      render: (dt) => <span style={{ color: "#334155", fontSize: "0.85rem", fontWeight: 600 }}>{formatSriLankaDateTime(dt)}</span>
+      width: 190,
+      render: (dt, r) => <span style={{ color: "#334155", fontSize: "0.85rem", fontWeight: 600 }}>{formatSriLankaDateTime(dt || r.timestamp)}</span>,
+      sorter: (a, b) => new Date(a.created_at || a.timestamp || 0) - new Date(b.created_at || b.timestamp || 0)
     },
     {
       title: "Dispensed Time (SL Time)",

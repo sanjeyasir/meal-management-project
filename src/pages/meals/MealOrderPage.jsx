@@ -14,6 +14,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { getNextFiveDaysMeals, formatDateKey } from "../../services/firebase/mealService";
+import { formatSriLankaDateTime } from "../../utils/timeUtils";
 
 const { Title, Text, Paragraph } = Typography;
 const { RangePicker } = DatePicker;
@@ -402,6 +403,11 @@ export default function MealOrderPage() {
                       <div>
                         <div style={{ fontWeight: 700, fontSize: 13 }}>{m.date}</div>
                         <div style={{ fontSize: 12, color: "#059669", fontWeight: 600 }}>{m.meal_type}</div>
+                        {(m.created_at || m.timestamp) && (
+                          <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>
+                            Ordered: {formatSriLankaDateTime(m.created_at || m.timestamp)}
+                          </div>
+                        )}
                       </div>
                       <Tag color={m.status === "Recieved" ? "green" : "blue"} style={{ fontWeight: 700 }}>
                         {m.status}

@@ -103,10 +103,41 @@ router.post("/order", async (req, res) => {
     const startDateObj = new Date(start_date || new Date());
     const endDateObj = new Date(end_date || startDateObj);
 
+    // Extract user preferences for meal types
+    let rawBreakfast = Number(breakfast) || 0;
+    let rawLunch = Number(lunch) || 0;
+    let rawDinner = Number(dinner) || 0;
+
+    // Support single meal_type / mealType passed in request body
+    const singleMealType = req.body.meal_type || req.body.mealType;
+    if (singleMealType) {
+      const typeLower = String(singleMealType).trim().toLowerCase();
+      const qty = Number(req.body.quantity) || 1;
+      if (typeLower === "breakfast") rawBreakfast = Math.max(rawBreakfast, qty);
+      else if (typeLower === "lunch") rawLunch = Math.max(rawLunch, qty);
+      else if (typeLower === "dinner") rawDinner = Math.max(rawDinner, qty);
+    }
+
+    // Support array of meals / meal_types passed in request body
+    if (Array.isArray(req.body.meals)) {
+      for (const m of req.body.meals) {
+        const typeStr = typeof m === "string" ? m : (m?.meal_type || m?.mealType || "");
+        const typeLower = String(typeStr).trim().toLowerCase();
+        const qty = typeof m === "object" && m?.quantity ? Number(m.quantity) || 1 : 1;
+        if (typeLower === "breakfast") rawBreakfast = Math.max(rawBreakfast, qty);
+        else if (typeLower === "lunch") rawLunch = Math.max(rawLunch, qty);
+        else if (typeLower === "dinner") rawDinner = Math.max(rawDinner, qty);
+      }
+    }
+
+    // Business Rule: For an employee, for a given day, based on user preference,
+    // there should be 0 or 1 meal order per meal type (not 2 or more).
+    // If the user has included more than 1 per meal type for a given day,
+    // ensure it is created for 1 for that meal type per day.
     const mealQuantities = {
-      Breakfast: Number(breakfast) || 0,
-      Lunch: Number(lunch) || 0,
-      Dinner: Number(dinner) || 0
+      Breakfast: rawBreakfast > 0 ? 1 : 0,
+      Lunch: rawLunch > 0 ? 1 : 0,
+      Dinner: rawDinner > 0 ? 1 : 0
     };
 
     const batch = db.batch();
@@ -120,8 +151,8 @@ router.post("/order", async (req, res) => {
       // Check existing allocations for duplicate prevention
       const existingAllocations = await findAllocationsForEmployee(resolvedEmpId, dateStr);
 
-      for (const [mealType, qty] of Object.entries(mealQuantities)) {
-        if (qty > 0) {
+      for (const [mealType, count] of Object.entries(mealQuantities)) {
+        if (count > 0) {
           const isAlreadyAllocated = existingAllocations.some(a => a.meal_type === mealType);
 
           if (isAlreadyAllocated) {
@@ -129,9 +160,11 @@ router.post("/order", async (req, res) => {
             continue;
           }
 
-          const docRef = db.collection(MEAL_COLLECTION).doc();
+          // Deterministic document ID to prevent duplicate meal order records
+          const allocationId = `${resolvedEmpId}_${dateStr}_${mealType}`.replace(/\s+/g, "_");
+          const docRef = db.collection(MEAL_COLLECTION).doc(allocationId);
           const orderData = {
-            id: docRef.id,
+            id: allocationId,
             employee_id: resolvedEmpId,
             emp_id: resolvedEmpId,
             employee_name: resolvedEmpName,
@@ -142,7 +175,7 @@ router.post("/order", async (req, res) => {
             pay_category: resolvedPayCat,
             date: dateStr,
             meal_type: mealType,
-            quantity: qty,
+            quantity: 1, // Enforced 1 portion per meal type per day
             status: "Ordered",
             received: false,
             created_by: createdBy,

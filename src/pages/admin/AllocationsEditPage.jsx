@@ -309,19 +309,38 @@ export default function AllocationsEditPage() {
       }
     },
     {
-      title: "Meal Slot",
+      title: "Meal Slot & Count",
       dataIndex: "meal_type",
       key: "meal_type",
-      width: 120,
-      render: (type) => {
+      width: 170,
+      render: (type, r) => {
         const icon = type === "Breakfast" ? "☕" : type === "Lunch" ? "🍲" : "🍽️";
         const color = type === "Breakfast" ? "orange" : type === "Lunch" ? "green" : "purple";
+        const count = r.quantity || 1;
         return (
-          <Tag color={color} style={{ fontSize: "0.85rem", padding: "3px 8px", borderRadius: 6, fontWeight: 700 }}>
-            {icon} {type}
-          </Tag>
+          <Space size={6} wrap>
+            <Tag color={color} style={{ fontSize: "0.85rem", padding: "3px 8px", borderRadius: 6, fontWeight: 700, margin: 0 }}>
+              {icon} {type}
+            </Tag>
+            <Tag color="blue" style={{ fontWeight: 800, margin: 0, borderRadius: 10, background: "#eff6ff", borderColor: "#bfdbfe", color: "#1d4ed8" }}>
+              {count} {count === 1 ? "Meal" : "Meals"}
+            </Tag>
+          </Space>
         );
       }
+    },
+    {
+      title: "Meal Count",
+      dataIndex: "quantity",
+      key: "quantity",
+      width: 110,
+      align: "center",
+      render: (qty) => (
+        <Tag color="cyan" style={{ fontWeight: 800, borderRadius: 12, padding: "2px 10px", fontSize: 13 }}>
+          {qty || 1}
+        </Tag>
+      ),
+      sorter: (a, b) => (a.quantity || 1) - (b.quantity || 1)
     },
     {
       title: "Status",
@@ -635,6 +654,12 @@ export default function AllocationsEditPage() {
                         style={{ marginLeft: 8, fontWeight: 700, borderRadius: 6 }}
                       >
                         {mealIcon} {item.meal_type}
+                      </Tag>
+                      <Tag
+                        color="blue"
+                        style={{ marginLeft: 4, fontWeight: 800, borderRadius: 8, background: "#eff6ff", borderColor: "#bfdbfe", color: "#1d4ed8" }}
+                      >
+                        {item.quantity || 1} {(item.quantity || 1) === 1 ? "Meal" : "Meals"}
                       </Tag>
                     </div>
 

@@ -54,8 +54,14 @@ export default function MealConfirmOrderPage() {
       const categoryConfig = await getCategoryByName(orderData.category_name || currentUser.category_name);
       const payCategory = categoryConfig?.configuration_detail || orderData.pay_category || "Full Paid";
 
-      // 2. Batch Create in Firestore
-      const outcome = await createMealOrder(payCategory, orderData, currentUser.name);
+      // 2. Batch Create in Firestore (ensuring 0 or 1 meal order per meal type)
+      const sanitizedOrderData = {
+        ...orderData,
+        breakfast: Number(orderData.breakfast || 0) > 0 ? 1 : 0,
+        lunch: Number(orderData.lunch || 0) > 0 ? 1 : 0,
+        dinner: Number(orderData.dinner || 0) > 0 ? 1 : 0
+      };
+      const outcome = await createMealOrder(payCategory, sanitizedOrderData, currentUser.name);
       
       setResults(outcome);
       setSubmitted(true);
@@ -137,17 +143,23 @@ export default function MealConfirmOrderPage() {
 
               <Divider style={{ margin: "8px 0" }} />
 
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <Text type="secondary">Breakfast / Day:</Text>
-                <Text strong>{orderData.breakfast} portion(s)</Text>
+                <Tag color={orderData.breakfast > 0 ? "orange" : "default"} style={{ fontWeight: 700 }}>
+                  {orderData.breakfast > 0 ? "1 meal (Ordered)" : "0 (Not Ordered)"}
+                </Tag>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <Text type="secondary">Lunch / Day:</Text>
-                <Text strong>{orderData.lunch} portion(s)</Text>
+                <Tag color={orderData.lunch > 0 ? "green" : "default"} style={{ fontWeight: 700 }}>
+                  {orderData.lunch > 0 ? "1 meal (Ordered)" : "0 (Not Ordered)"}
+                </Tag>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <Text type="secondary">Dinner / Day:</Text>
-                <Text strong>{orderData.dinner} portion(s)</Text>
+                <Tag color={orderData.dinner > 0 ? "purple" : "default"} style={{ fontWeight: 700 }}>
+                  {orderData.dinner > 0 ? "1 meal (Ordered)" : "0 (Not Ordered)"}
+                </Tag>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <Text type="secondary">Payment Category:</Text>

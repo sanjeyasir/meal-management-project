@@ -190,9 +190,13 @@ export default function MealOrderPage() {
                       shape="circle"
                       type="primary"
                       icon={<PlusOutlined />}
+                      disabled={breakfast >= 1}
                       style={{ background: "#d97706" }}
-                      onClick={() => { setBreakfast(breakfast + 1); setOrderReady(false); }}
+                      onClick={() => { setBreakfast(Math.min(1, breakfast + 1)); setOrderReady(false); }}
                     />
+                  </div>
+                  <div style={{ fontSize: 11, color: "#92400e", marginTop: 8, fontWeight: 600 }}>
+                    Max 1 meal / day
                   </div>
                 </Card>
               </Col>
@@ -224,9 +228,13 @@ export default function MealOrderPage() {
                       shape="circle"
                       type="primary"
                       icon={<PlusOutlined />}
+                      disabled={lunch >= 1}
                       style={{ background: "#059669" }}
-                      onClick={() => { setLunch(lunch + 1); setOrderReady(false); }}
+                      onClick={() => { setLunch(Math.min(1, lunch + 1)); setOrderReady(false); }}
                     />
+                  </div>
+                  <div style={{ fontSize: 11, color: "#065f46", marginTop: 8, fontWeight: 600 }}>
+                    Max 1 meal / day
                   </div>
                 </Card>
               </Col>
@@ -258,9 +266,13 @@ export default function MealOrderPage() {
                       shape="circle"
                       type="primary"
                       icon={<PlusOutlined />}
+                      disabled={dinner >= 1}
                       style={{ background: "#dc2626" }}
-                      onClick={() => { setDinner(dinner + 1); setOrderReady(false); }}
+                      onClick={() => { setDinner(Math.min(1, dinner + 1)); setOrderReady(false); }}
                     />
+                  </div>
+                  <div style={{ fontSize: 11, color: "#991b1b", marginTop: 8, fontWeight: 600 }}>
+                    Max 1 meal / day
                   </div>
                 </Card>
               </Col>
@@ -402,7 +414,12 @@ export default function MealOrderPage() {
                     >
                       <div>
                         <div style={{ fontWeight: 700, fontSize: 13 }}>{m.date}</div>
-                        <div style={{ fontSize: 12, color: "#059669", fontWeight: 600 }}>{m.meal_type}</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "2px 0" }}>
+                          <span style={{ fontSize: 12, color: "#059669", fontWeight: 700 }}>{m.meal_type}</span>
+                          <Tag color="cyan" style={{ fontSize: 11, fontWeight: 700, margin: 0, padding: "0 6px", borderRadius: 8 }}>
+                            {m.quantity || 1} {(m.quantity || 1) === 1 ? "Meal" : "Meals"}
+                          </Tag>
+                        </div>
                         {(m.created_at || m.timestamp) && (
                           <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>
                             Ordered: {formatSriLankaDateTime(m.created_at || m.timestamp)}

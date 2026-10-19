@@ -51,10 +51,14 @@ export async function createMealOrder(payCategory, orderDetails, createdBy) {
   const startDate = new Date(orderDetails.start_date);
   const endDate = new Date(orderDetails.end_date);
 
+  // Business Rule: For a given day, based on user preference,
+  // there should be 0 or 1 meal order per meal type (not 2 or more).
+  // If the user has included more than 1 per meal type for a given day,
+  // ensure it is created for 1 for that meal type per day.
   const mealMap = {
-    Breakfast: Number(orderDetails.breakfast || 0),
-    Lunch: Number(orderDetails.lunch || 0),
-    Dinner: Number(orderDetails.dinner || 0),
+    Breakfast: Number(orderDetails.breakfast || 0) > 0 ? 1 : 0,
+    Lunch: Number(orderDetails.lunch || 0) > 0 ? 1 : 0,
+    Dinner: Number(orderDetails.dinner || 0) > 0 ? 1 : 0,
   };
 
   // Calculate day difference
@@ -93,6 +97,7 @@ export async function createMealOrder(payCategory, orderDetails, createdBy) {
               section,
               date: dayStr,
               meal_type: mealType,
+              quantity: 1,
               category_name: categoryName,
               category_employment: categoryName,
               pay_category: payCategory || "Full Paid",

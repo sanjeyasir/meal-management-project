@@ -408,11 +408,38 @@ export default function DailyArchivedReportsPage() {
       }
     },
     {
-      title: "Meal Slot",
+      title: "Meal Slot & Count",
       dataIndex: "meal_type",
       key: "meal_type",
-      width: 120,
-      render: (m) => <Tag color={m === "Breakfast" ? "orange" : m === "Lunch" ? "green" : "purple"} style={{ fontWeight: 700 }}>{m}</Tag>
+      width: 170,
+      render: (m, r) => {
+        const count = r.quantity || 1;
+        const color = m === "Breakfast" ? "orange" : m === "Lunch" ? "green" : "purple";
+        const icon = m === "Breakfast" ? "☕" : m === "Lunch" ? "🍲" : "🍽️";
+        return (
+          <Space size={6} wrap>
+            <Tag color={color} style={{ fontWeight: 700, margin: 0 }}>
+              {icon} {m}
+            </Tag>
+            <Tag color="blue" style={{ fontWeight: 800, margin: 0, borderRadius: 10, background: "#eff6ff", borderColor: "#bfdbfe", color: "#1d4ed8" }}>
+              {count} {count === 1 ? "Meal" : "Meals"}
+            </Tag>
+          </Space>
+        );
+      }
+    },
+    {
+      title: "Meal Count",
+      dataIndex: "quantity",
+      key: "quantity",
+      width: 110,
+      align: "center",
+      render: (qty) => (
+        <Tag color="cyan" style={{ fontWeight: 800, borderRadius: 12, padding: "2px 10px", fontSize: 13 }}>
+          {qty || 1}
+        </Tag>
+      ),
+      sorter: (a, b) => (a.quantity || 1) - (b.quantity || 1)
     },
     {
       title: "Status",

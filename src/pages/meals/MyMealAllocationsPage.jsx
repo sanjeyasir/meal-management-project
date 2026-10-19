@@ -67,16 +67,21 @@ export default function MyMealAllocationsPage() {
       sorter: (a, b) => a.date.localeCompare(b.date)
     },
     {
-      title: "Meal Slot",
+      title: "Meal Slot & Count",
       dataIndex: "meal_type",
       key: "meal_type",
-      render: (m) => {
+      render: (m, r) => {
         const color = m === "Breakfast" ? "orange" : m === "Lunch" ? "green" : "red";
         const icon = m === "Breakfast" ? "☕" : m === "Lunch" ? "🍲" : "🍽";
+        const count = r.quantity || 1;
         return (
-          <Space>
-            <span>{icon}</span>
-            <Text strong>{m}</Text>
+          <Space size={8} wrap>
+            <Tag color={color} style={{ fontWeight: 700, margin: 0 }}>
+              {icon} {m}
+            </Tag>
+            <Tag color="blue" style={{ fontWeight: 800, margin: 0, borderRadius: 10, background: "#eff6ff", borderColor: "#bfdbfe", color: "#1d4ed8" }}>
+              {count} {count === 1 ? "Meal" : "Meals"}
+            </Tag>
           </Space>
         );
       },
@@ -86,6 +91,19 @@ export default function MyMealAllocationsPage() {
         { text: "Dinner", value: "Dinner" }
       ],
       onFilter: (value, record) => record.meal_type === value
+    },
+    {
+      title: "Meal Count",
+      dataIndex: "quantity",
+      key: "quantity",
+      width: 110,
+      align: "center",
+      render: (qty) => (
+        <Tag color="cyan" style={{ fontWeight: 800, borderRadius: 12, padding: "2px 10px", fontSize: 13 }}>
+          {qty || 1}
+        </Tag>
+      ),
+      sorter: (a, b) => (a.quantity || 1) - (b.quantity || 1)
     },
     {
       title: "Payment Category",

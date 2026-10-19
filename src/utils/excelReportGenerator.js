@@ -15,7 +15,7 @@ function populateTransactionsSheet(worksheet, {
   worksheet.views = [{ showGridLines: true, state: "frozen", ySplit: 3 }];
 
   // 1. Report Title & Header Banner
-  worksheet.mergeCells("A1:J1");
+  worksheet.mergeCells("A1:K1");
   const titleCell = worksheet.getCell("A1");
   titleCell.value = title;
   titleCell.font = { name: "Calibri", size: 14, bold: true, color: { argb: "FFFFFFFF" } };
@@ -24,7 +24,7 @@ function populateTransactionsSheet(worksheet, {
   worksheet.getRow(1).height = 34;
 
   // 2. Subtitle / Metadata Row
-  worksheet.mergeCells("A2:J2");
+  worksheet.mergeCells("A2:K2");
   const subCell = worksheet.getCell("A2");
   subCell.value = subtitle;
   subCell.font = { name: "Calibri", size: 10, italic: true, color: { argb: "FFFFFFFF" } };
@@ -41,6 +41,7 @@ function populateTransactionsSheet(worksheet, {
     "Meal Category",
     "Payment Plan",
     "Meal Slot",
+    "Meal Count",
     "Status",
     "Ordered Date & Time (Sri Lanka Time)",
     "Dispensed At (Sri Lanka Time)"
@@ -76,6 +77,7 @@ function populateTransactionsSheet(worksheet, {
     const categoryName = item.category_name || item.category_employment || item.employee_category || "Staff";
     const masterSubsidy = item.pay_category || catMap[categoryName.toLowerCase()] || item.configuration_detail;
     const normalizedPayment = normalizePaymentType(masterSubsidy);
+    const mealCount = item.quantity || 1;
 
     const row = worksheet.addRow([
       item.date || "-",
@@ -85,6 +87,7 @@ function populateTransactionsSheet(worksheet, {
       categoryName,
       normalizedPayment,
       item.meal_type || "-",
+      mealCount,
       isRecv ? "Received" : "Ordered",
       createdAtFormatted,
       receivedAtFormatted
@@ -118,6 +121,7 @@ function populateTransactionsSheet(worksheet, {
     row.getCell(8).alignment = { horizontal: "center", vertical: "middle" };
     row.getCell(9).alignment = { horizontal: "center", vertical: "middle" };
     row.getCell(10).alignment = { horizontal: "center", vertical: "middle" };
+    row.getCell(11).alignment = { horizontal: "center", vertical: "middle" };
 
     const payCell = row.getCell(6);
     if (normalizedPayment === "Full Paid") {
@@ -128,7 +132,10 @@ function populateTransactionsSheet(worksheet, {
       payCell.font = { name: "Calibri", size: 10, bold: true, color: { argb: "FFDC2626" } };
     }
 
-    const statusCell = row.getCell(8);
+    const countCell = row.getCell(8);
+    countCell.font = { name: "Calibri", size: 10, bold: true, color: { argb: "FF0F172A" } };
+
+    const statusCell = row.getCell(9);
     if (isRecv) {
       statusCell.font = { name: "Calibri", size: 10, bold: true, color: { argb: "FF047857" } };
     } else {
@@ -136,7 +143,7 @@ function populateTransactionsSheet(worksheet, {
     }
   });
 
-  worksheet.autoFilter = `A3:J${Math.max(3, allocations.length + 3)}`;
+  worksheet.autoFilter = `A3:K${Math.max(3, allocations.length + 3)}`;
   worksheet.getColumn(1).width = 16;
   worksheet.getColumn(2).width = 16;
   worksheet.getColumn(3).width = 26;
@@ -145,8 +152,9 @@ function populateTransactionsSheet(worksheet, {
   worksheet.getColumn(6).width = 20;
   worksheet.getColumn(7).width = 14;
   worksheet.getColumn(8).width = 14;
-  worksheet.getColumn(9).width = 26;
+  worksheet.getColumn(9).width = 14;
   worksheet.getColumn(10).width = 26;
+  worksheet.getColumn(11).width = 26;
 }
 
 /**

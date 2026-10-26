@@ -48,10 +48,12 @@ export default function AnalyticsDashboard() {
 
       const mapped = (allAlloc || []).map((a) => {
         const emp = empMap.get(String(a.employee_id || a.emp_id || "").trim().toLowerCase());
+        const mappedDesignation = emp?.designation || a.current_designation || a.designation || "Staff";
         return {
           ...a,
           employee_name: emp?.name || a.employee_name || a.name,
           company: emp?.company || a.company,
+          designation: mappedDesignation,
           category_name: emp?.category_employment || emp?.category_name || a.category_name,
           pay_category: emp?.pay_category ? normalizePaymentType(emp.pay_category) : normalizePaymentType(a.pay_category)
         };
@@ -108,17 +110,17 @@ export default function AnalyticsDashboard() {
   const halfPaidCount = filteredAllocations.filter((a) => normalizePaymentType(a.pay_category || a.category_employment) === "Half Paid").length;
   const notPaidCount = filteredAllocations.filter((a) => normalizePaymentType(a.pay_category || a.category_employment) === "Not Paid").length;
 
-  // Department Leaderboard
-  const departmentBreakdown = useMemo(() => {
+  // Designation Leaderboard
+  const designationBreakdown = useMemo(() => {
     const map = {};
     filteredAllocations.forEach((a) => {
-      const sec = a.section || "General Operations";
-      if (!map[sec]) {
-        map[sec] = { name: sec, count: 0, received: 0 };
+      const desig = (a.designation || a.current_designation || "Staff").trim() || "Staff";
+      if (!map[desig]) {
+        map[desig] = { name: desig, count: 0, received: 0 };
       }
-      map[sec].count += 1;
+      map[desig].count += 1;
       if ((a.status || "").toLowerCase() === "recieved" || (a.status || "").toLowerCase() === "received") {
-        map[sec].received += 1;
+        map[desig].received += 1;
       }
     });
     return Object.values(map).sort((a, b) => b.count - a.count);
@@ -160,7 +162,7 @@ export default function AnalyticsDashboard() {
             Operations & Consumption Dashboard
           </Title>
           <Text type="secondary" style={{ fontSize: 14 }}>
-            Live catering analytics, portion demand breakdown, and department consumption
+            Live catering analytics, portion demand breakdown, and designation consumption
           </Text>
         </div>
 
@@ -354,12 +356,12 @@ export default function AnalyticsDashboard() {
           </Card>
         </Col>
 
-        {/* Right Column: Department Leaderboard */}
+        {/* Right Column: Designation Leaderboard */}
         <Col xs={24} lg={12}>
           <Card
             title={
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontWeight: 800, fontSize: 16 }}>Department Consumption</span>
+                <span style={{ fontWeight: 800, fontSize: 16 }}>Designation Consumption</span>
                 <Button
                   type="link"
                   onClick={() => navigate("/admin/all-allocations")}
@@ -372,19 +374,19 @@ export default function AnalyticsDashboard() {
             className="modern-card"
             style={{ height: "100%" }}
           >
-            {departmentBreakdown.length === 0 ? (
+            {designationBreakdown.length === 0 ? (
               <div style={{ textAlign: "center", padding: 48, color: "#94a3b8" }}>
                 No meal records in the selected timeframe.
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {departmentBreakdown.map((dept, idx) => {
-                  const share = totalCount > 0 ? Math.round((dept.count / totalCount) * 100) : 0;
-                  const recvRate = dept.count > 0 ? Math.round((dept.received / dept.count) * 100) : 0;
+                {designationBreakdown.map((desig, idx) => {
+                  const share = totalCount > 0 ? Math.round((desig.count / totalCount) * 100) : 0;
+                  const recvRate = desig.count > 0 ? Math.round((desig.received / desig.count) * 100) : 0;
 
                   return (
                     <div
-                      key={dept.name}
+                      key={desig.name}
                       style={{
                         padding: "14px 16px",
                         background: idx === 0 ? "#f0fdf4" : "#f8fafc",
@@ -397,16 +399,16 @@ export default function AnalyticsDashboard() {
                           <Tag color={idx === 0 ? "green" : "blue"} style={{ fontWeight: 800, margin: 0 }}>
                             #{idx + 1}
                           </Tag>
-                          <Text strong style={{ fontSize: 14, color: "#0f172a" }}>{dept.name}</Text>
+                          <Text strong style={{ fontSize: 14, color: "#0f172a" }}>{desig.name}</Text>
                         </div>
                         <div style={{ textAlign: "right" }}>
-                          <span style={{ fontWeight: 800, fontSize: 14, color: "#0f172a" }}>{dept.count} Meals</span>
+                          <span style={{ fontWeight: 800, fontSize: 14, color: "#0f172a" }}>{desig.count} Meals</span>
                           <span style={{ fontSize: 12, color: "#64748b", marginLeft: 6 }}>({share}%)</span>
                         </div>
                       </div>
 
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#64748b", marginTop: 6 }}>
-                        <span>Dispensed: <b style={{ color: "#065f46" }}>{dept.received}</b> / {dept.count}</span>
+                        <span>Dispensed: <b style={{ color: "#065f46" }}>{desig.received}</b> / {desig.count}</span>
                         <span>Dispense Rate: <b style={{ color: "#0f172a" }}>{recvRate}%</b></span>
                       </div>
                     </div>

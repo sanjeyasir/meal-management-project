@@ -157,7 +157,7 @@ export default function PortalUserGuide({ onDownloadPdf }) {
           <Row gutter={[12, 12]}>
             {[
               { id: "mod1", title: "1. Secure Login", desc: "Admin credentials & role-based authentication", route: "#/admin/login" },
-              { id: "mod2", title: "2. Operations Dashboard", desc: "Live KPI metrics, portion breakdown & department consumption", route: "#/admin/dashboard" },
+              { id: "mod2", title: "2. Operations Dashboard", desc: "Live KPI metrics, portion breakdown & designation consumption", route: "#/admin/dashboard" },
               { id: "mod3", title: "3. Today's Allocations", desc: "Real-time table, search filters & Formatted Excel export", route: "#/admin/reports" },
               { id: "mod4", title: "4. Previous Day Allocations", desc: "Historical query, custom date ranges & audit export", route: "#/admin/all-allocations" },
               { id: "mod5", title: "5. Daily Archived Reports", desc: "3-day consolidated archives & 1:00 AM storage maintenance", route: "#/admin/daily-archive" },

@@ -158,15 +158,13 @@ function populateTransactionsSheet(worksheet, {
 }
 
 /**
- * Generate a comprehensive multi-tab Excel Workbook:
- * - Tab 1: Target Daily Allocations
- * - Tab 2: 3-Day Historical Review (Target Day + 2 Previous Days if present)
- * - Tab 3: Daily Summary & Aggregate Statistics
+ * Generate a comprehensive daily Excel Workbook (Only Current Target Date):
+ * - Tab 1: Daily Archive (Target Date Allocations)
+ * - Tab 2: Summary & Statistics (Target Date Breakdown)
  */
 export async function buildMealReportWorkbook({
   allocations = [],
   targetAllocations = null,
-  historicalAllocations = null,
   targetDate = null,
   title = "HAYLEYS ECO SOLUTIONS - DAILY MEAL ALLOCATIONS ARCHIVE REPORT",
   dateRangeStr = "Daily Archive",
@@ -193,10 +191,8 @@ export async function buildMealReportWorkbook({
     }
   }
 
-  // Determine Target Day Allocations and 3-Day All Allocations
+  // Determine Target Day Allocations (Only current date)
   let targetList = targetAllocations;
-  let allList = allocations;
-
   if (targetDate && !targetList) {
     targetList = allocations.filter(a => a.date === targetDate);
   } else if (!targetList) {
@@ -219,44 +215,26 @@ export async function buildMealReportWorkbook({
   });
 
   // ----------------------------------------------------
-  // SHEET 2: 3-Day Historical Review (Target Day + 2 Previous Days)
+  // SHEET 2: Daily Summary & Statistics Breakdown
   // ----------------------------------------------------
-  const sheet2 = workbook.addWorksheet("3-Day Historical Review");
-  // Sort all allocations descending by date, then employee name
-  const sortedAll = [...allList].sort((a, b) => {
-    const dComp = (b.date || "").localeCompare(a.date || "");
-    if (dComp !== 0) return dComp;
-    return (a.employee_name || "").localeCompare(b.employee_name || "");
-  });
+  const sheet2 = workbook.addWorksheet("Summary & Statistics");
+  sheet2.views = [{ showGridLines: true, state: "frozen", ySplit: 3 }];
 
-  populateTransactionsSheet(sheet2, {
-    allocations: sortedAll,
-    title: `HAYLEYS ECO SOLUTIONS - 3-DAY HISTORICAL ALLOCATIONS REPORT`,
-    subtitle: `Includes Target Date (${effectiveTargetDate}) + Up to 2 Previous Days  |  Generated on: ${sriLankaNow}  |  Total Records: ${sortedAll.length}`,
-    catMap
-  });
+  sheet2.mergeCells("A1:K1");
+  const s2Title = sheet2.getCell("A1");
+  s2Title.value = `HAYLEYS ECO SOLUTIONS - DAILY SUMMARY & METRICS (${effectiveTargetDate})`;
+  s2Title.font = { name: "Calibri", size: 14, bold: true, color: { argb: "FFFFFFFF" } };
+  s2Title.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF064E3B" } };
+  s2Title.alignment = { horizontal: "center", vertical: "middle" };
+  sheet2.getRow(1).height = 34;
 
-  // ----------------------------------------------------
-  // SHEET 3: 3-Day Summary & Statistics Breakdown
-  // ----------------------------------------------------
-  const sheet3 = workbook.addWorksheet("Summary & Statistics");
-  sheet3.views = [{ showGridLines: true, state: "frozen", ySplit: 3 }];
-
-  sheet3.mergeCells("A1:K1");
-  const s3Title = sheet3.getCell("A1");
-  s3Title.value = `HAYLEYS ECO SOLUTIONS - 3-DAY SUMMARY & METRICS BREAKDOWN`;
-  s3Title.font = { name: "Calibri", size: 14, bold: true, color: { argb: "FFFFFFFF" } };
-  s3Title.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF064E3B" } };
-  s3Title.alignment = { horizontal: "center", vertical: "middle" };
-  sheet3.getRow(1).height = 34;
-
-  sheet3.mergeCells("A2:K2");
-  const s3Sub = sheet3.getCell("A2");
-  s3Sub.value = `Generated on: ${sriLankaNow} (Sri Jayawardenepura Time)  |  Target Date: ${effectiveTargetDate}  |  Trigger: ${generatedBy}`;
-  s3Sub.font = { name: "Calibri", size: 10, italic: true, color: { argb: "FFFFFFFF" } };
-  s3Sub.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF047857" } };
-  s3Sub.alignment = { horizontal: "center", vertical: "middle" };
-  sheet3.getRow(2).height = 24;
+  sheet2.mergeCells("A2:K2");
+  const s2Sub = sheet2.getCell("A2");
+  s2Sub.value = `Generated on: ${sriLankaNow} (Sri Jayawardenepura Time)  |  Target Date: ${effectiveTargetDate}  |  Trigger: ${generatedBy}`;
+  s2Sub.font = { name: "Calibri", size: 10, italic: true, color: { argb: "FFFFFFFF" } };
+  s2Sub.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF047857" } };
+  s2Sub.alignment = { horizontal: "center", vertical: "middle" };
+  sheet2.getRow(2).height = 24;
 
   const statHeaders = [
     "Date",
@@ -272,7 +250,7 @@ export async function buildMealReportWorkbook({
     "Dispense Rate"
   ];
 
-  const statHeaderRow = sheet3.addRow(statHeaders);
+  const statHeaderRow = sheet2.addRow(statHeaders);
   statHeaderRow.height = 26;
   statHeaderRow.font = { name: "Calibri", size: 11, bold: true, color: { argb: "FFFFFFFF" } };
   statHeaderRow.alignment = { horizontal: "center", vertical: "middle" };
@@ -288,72 +266,63 @@ export async function buildMealReportWorkbook({
     };
   }
 
-  // Group by distinct dates
-  const distinctDates = Array.from(new Set(sortedAll.map(a => a.date).filter(Boolean))).sort().reverse();
-  distinctDates.forEach((dKey, idx) => {
-    const dayItems = sortedAll.filter(a => a.date === dKey);
-    const total = dayItems.length;
-    const dispensed = dayItems.filter(a => (a.status || "").toLowerCase() === "received" || (a.status || "").toLowerCase() === "recieved" || a.received).length;
-    const pending = total - dispensed;
-    const bf = dayItems.filter(a => a.meal_type === "Breakfast").length;
-    const lu = dayItems.filter(a => a.meal_type === "Lunch").length;
-    const dn = dayItems.filter(a => a.meal_type === "Dinner").length;
+  const total = targetList.length;
+  const dispensed = targetList.filter(a => (a.status || "").toLowerCase() === "received" || (a.status || "").toLowerCase() === "recieved" || a.received).length;
+  const pending = total - dispensed;
+  const bf = targetList.filter(a => a.meal_type === "Breakfast").length;
+  const lu = targetList.filter(a => a.meal_type === "Lunch").length;
+  const dn = targetList.filter(a => a.meal_type === "Dinner").length;
 
-    const getSubsidy = (item) => {
-      const cat = (item.category_name || item.category_employment || "Staff").trim();
-      const masterSubsidy = catMap[cat.toLowerCase()] || item.pay_category || item.configuration_detail;
-      return normalizePaymentType(masterSubsidy);
+  const getSubsidy = (item) => {
+    const cat = (item.category_name || item.category_employment || "Staff").trim();
+    const masterSubsidy = catMap[cat.toLowerCase()] || item.pay_category || item.configuration_detail;
+    return normalizePaymentType(masterSubsidy);
+  };
+
+  const fp = targetList.filter(a => getSubsidy(a) === "Full Paid").length;
+  const hp = targetList.filter(a => getSubsidy(a) === "Half Paid").length;
+  const np = targetList.filter(a => getSubsidy(a) === "Not Paid").length;
+  const rate = total > 0 ? `${Math.round((dispensed / total) * 100)}%` : "0%";
+
+  const r = sheet2.addRow([
+    effectiveTargetDate,
+    total,
+    dispensed,
+    pending,
+    bf,
+    lu,
+    dn,
+    fp,
+    hp,
+    np,
+    rate
+  ]);
+  r.height = 24;
+  r.font = { name: "Calibri", size: 10 };
+  r.alignment = { horizontal: "center", vertical: "middle" };
+
+  for (let c = 1; c <= statHeaders.length; c++) {
+    const cell = r.getCell(c);
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
+    cell.border = {
+      top: { style: "hair", color: { argb: "FFE2E8F0" } },
+      left: { style: "hair", color: { argb: "FFE2E8F0" } },
+      bottom: { style: "hair", color: { argb: "FFE2E8F0" } },
+      right: { style: "hair", color: { argb: "FFE2E8F0" } }
     };
+  }
 
-    const fp = dayItems.filter(a => getSubsidy(a) === "Full Paid").length;
-    const hp = dayItems.filter(a => getSubsidy(a) === "Half Paid").length;
-    const np = dayItems.filter(a => getSubsidy(a) === "Not Paid").length;
-    const rate = total > 0 ? `${Math.round((dispensed / total) * 100)}%` : "0%";
-
-    const r = sheet3.addRow([
-      dKey,
-      total,
-      dispensed,
-      pending,
-      bf,
-      lu,
-      dn,
-      fp,
-      hp,
-      np,
-      rate
-    ]);
-    r.height = 22;
-    r.font = { name: "Calibri", size: 10 };
-    r.alignment = { horizontal: "center", vertical: "middle" };
-
-    const bgFill = idx % 2 === 1
-      ? { type: "pattern", pattern: "solid", fgColor: { argb: "FFF8FAFC" } }
-      : { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
-
-    for (let c = 1; c <= statHeaders.length; c++) {
-      const cell = r.getCell(c);
-      cell.fill = bgFill;
-      cell.border = {
-        top: { style: "hair", color: { argb: "FFE2E8F0" } },
-        left: { style: "hair", color: { argb: "FFE2E8F0" } },
-        bottom: { style: "hair", color: { argb: "FFE2E8F0" } },
-        right: { style: "hair", color: { argb: "FFE2E8F0" } }
-      };
-    }
-  });
-
-  sheet3.getColumn(1).width = 16;
-  sheet3.getColumn(2).width = 14;
-  sheet3.getColumn(3).width = 14;
-  sheet3.getColumn(4).width = 14;
-  sheet3.getColumn(5).width = 14;
-  sheet3.getColumn(6).width = 14;
-  sheet3.getColumn(7).width = 14;
-  sheet3.getColumn(8).width = 14;
-  sheet3.getColumn(9).width = 14;
-  sheet3.getColumn(10).width = 14;
-  sheet3.getColumn(11).width = 16;
+  sheet2.getColumn(1).width = 16;
+  sheet2.getColumn(2).width = 14;
+  sheet2.getColumn(3).width = 14;
+  sheet2.getColumn(4).width = 14;
+  sheet2.getColumn(5).width = 14;
+  sheet2.getColumn(6).width = 14;
+  sheet2.getColumn(7).width = 14;
+  sheet2.getColumn(8).width = 14;
+  sheet2.getColumn(9).width = 14;
+  sheet2.getColumn(10).width = 14;
+  sheet2.getColumn(11).width = 16;
 
   return workbook;
 }

@@ -97,7 +97,7 @@ export default function PortalUserGuide({ onDownloadPdf }) {
                 <ul style={{ paddingLeft: 18, fontSize: 13, color: "#475569", lineHeight: 1.8 }}>
                   <li><strong>Zero Food Waste:</strong> Accurate meal forecasts sent directly to central kitchens.</li>
                   <li><strong>Automated Subsidy Policies:</strong> Worker (Full Paid), Staff (Half Paid), Contractor (Not Paid).</li>
-                  <li><strong>Multi-Day Cloud Archives:</strong> Automated 3-day consolidated Excel workbooks uploaded to Firebase Cloud Storage.</li>
+                  <li><strong>Daily Cloud Archives:</strong> Automated target day Excel workbooks and summary breakdown uploaded to Firebase Cloud Storage.</li>
                 </ul>
               </Card>
             </Col>
@@ -160,7 +160,7 @@ export default function PortalUserGuide({ onDownloadPdf }) {
               { id: "mod2", title: "2. Operations Dashboard", desc: "Live KPI metrics, portion breakdown & designation consumption", route: "#/admin/dashboard" },
               { id: "mod3", title: "3. Today's Allocations", desc: "Real-time table, search filters & Formatted Excel export", route: "#/admin/reports" },
               { id: "mod4", title: "4. Previous Day Allocations", desc: "Historical query, custom date ranges & audit export", route: "#/admin/all-allocations" },
-              { id: "mod5", title: "5. Daily Archived Reports", desc: "3-day consolidated archives & 1:00 AM storage maintenance", route: "#/admin/daily-archive" },
+              { id: "mod5", title: "5. Daily Archived Reports", desc: "Daily archives & permanent cloud storage preservation", route: "#/admin/daily-archive" },
               { id: "mod6", title: "6. Employees Directory", desc: "579+ workforce records, Excel template & bulk import/export", route: "#/admin/employees" },
               { id: "mod7", title: "7. System Master Data", desc: "Subsidy matrix (Full/Half/None) & company entities", route: "#/admin/settings" }
             ].map((m) => (
@@ -411,13 +411,13 @@ export default function PortalUserGuide({ onDownloadPdf }) {
               </Text>
 
               <Paragraph style={{ fontSize: 13, color: "#334155", lineHeight: 1.6 }}>
-                Intelligent automated midnight archives combining target day allocations with 2 preceding days into a 3-tab formatted Excel workbook:
+                Automated daily archives compiling target day allocations into a formatted Excel workbook with summary & metrics breakdown:
               </Paragraph>
 
               <ul style={{ paddingLeft: 18, fontSize: 13, color: "#475569", lineHeight: 1.7 }}>
                 <li><strong>Firebase Cloud Storage:</strong> Each daily archive is stored securely with cloud-backed download links.</li>
-                <li><strong>1:00 AM Auto-Cleanup:</strong> Automatically prunes temporary allocations older than 2 days to maintain top-tier system speed.</li>
-                <li><strong>Manual Controls:</strong> <em>"Archive Yesterday's Data"</em> and <em>"Archive Custom Date..."</em> buttons for emergency backups.</li>
+                <li><strong>Permanent Preservation:</strong> All archived allocations and Excel reports are permanently preserved without deletion.</li>
+                <li><strong>Manual Controls:</strong> <em>"Archive Yesterday's Data"</em> and <em>"Archive Custom Date..."</em> buttons for on-demand archiving.</li>
               </ul>
             </Col>
 

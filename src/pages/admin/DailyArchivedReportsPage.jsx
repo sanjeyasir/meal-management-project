@@ -45,7 +45,6 @@ import {
   archiveDailyAllocationsForDate,
   downloadArchivedReport,
   deleteArchivedReport,
-  triggerArchivedCleanup,
   getYesterdayDateKey
 } from "../../services/firebase/archiveService";
 import { getMealAllocationsWithArchived, formatDateKey } from "../../services/firebase/mealService";
@@ -58,7 +57,6 @@ export default function DailyArchivedReportsPage() {
   const [archivedReports, setArchivedReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [archiving, setArchiving] = useState(false);
-  const [cleaningUp, setCleaningUp] = useState(false);
   const [downloadingId, setDownloadingId] = useState(null);
   const [viewMode, setViewMode] = useState("cards"); // "cards" | "table"
 
@@ -110,25 +108,6 @@ export default function DailyArchivedReportsPage() {
     }
   };
 
-  // Manual Trigger: 1:00 AM Cleanup Job (Prunes 2+ days old allocations from archive list)
-  const handleRunCleanup = async () => {
-    setCleaningUp(true);
-    try {
-      message.loading({ content: "Scanning and pruning 2+ days old archived records (1:00 AM Job)...", key: "cleanup" });
-      const res = await triggerArchivedCleanup(2, "Admin Console Manual Run");
-      message.success({
-        content: res.message || `Successfully pruned ${res.cleanup?.deletedCount || 0} old records!`,
-        key: "cleanup"
-      });
-      await loadArchives();
-    } catch (err) {
-      console.error("Cleanup error:", err);
-      message.error({ content: `Cleanup failed: ${err.message}`, key: "cleanup" });
-    } finally {
-      setCleaningUp(false);
-    }
-  };
-
   // Archive Custom Date
   const handleArchiveCustomDate = async () => {
     if (!selectedCustomDate) {
@@ -164,14 +143,16 @@ export default function DailyArchivedReportsPage() {
     }
   };
 
-  // Handle Delete Archive
-  const handleDelete = async (dateStr) => {
+  // Handle Delete Archive Report
+  const handleDelete = async (dateOrId) => {
     try {
-      await deleteArchivedReport(dateStr);
-      message.success(`Archived record for ${dateStr} deleted.`);
+      message.loading({ content: `Deleting archived report ${dateOrId}...`, key: "delete-report" });
+      await deleteArchivedReport(dateOrId);
+      message.success({ content: `Archived report for ${dateOrId} deleted successfully.`, key: "delete-report" });
       await loadArchives();
     } catch (err) {
-      message.error(`Delete failed: ${err.message}`);
+      console.error("Delete report error:", err);
+      message.error({ content: `Delete failed: ${err.message}`, key: "delete-report" });
     }
   };
 
@@ -319,7 +300,7 @@ export default function DailyArchivedReportsPage() {
       fixed: "right",
       render: (_, record) => (
         <Space size="small">
-          <Tooltip title="Download 3-Day Historical Excel (.xlsx) file">
+          <Tooltip title="Download Daily Archive Excel (.xlsx) file">
             <Button
               type="primary"
               size="small"
@@ -349,14 +330,16 @@ export default function DailyArchivedReportsPage() {
           </Tooltip>
 
           <Popconfirm
-            title="Delete Daily Archive"
-            description={`Delete archived record for ${record.date}?`}
-            onConfirm={() => handleDelete(record.date)}
+            title="Delete Daily Archive Report"
+            description={`Delete archived report for ${record.date || record.id}?`}
+            onConfirm={() => handleDelete(record.id || record.date)}
             okText="Yes, Delete"
             cancelText="No"
             okButtonProps={{ danger: true }}
           >
-            <Button danger size="small" icon={<DeleteOutlined />} style={{ borderRadius: 6 }} />
+            <Tooltip title="Delete this archived report">
+              <Button danger size="small" icon={<DeleteOutlined />} style={{ borderRadius: 6 }} />
+            </Tooltip>
           </Popconfirm>
         </Space>
       )
@@ -485,7 +468,7 @@ export default function DailyArchivedReportsPage() {
             Daily Archived Reports (Storage & Excel Downloads)
           </Title>
           <Text type="secondary" style={{ fontSize: 14, color: "#475569" }}>
-            Midnight historical archives: Target day allocations combined with 2 preceding days in a 3-tab formatted Excel file.
+            Midnight archives: Target day allocations in a formatted Excel file with summary & metrics breakdown.
           </Text>
         </div>
 
@@ -506,24 +489,6 @@ export default function DailyArchivedReportsPage() {
           >
             Archive Yesterday's Data ({yesterdayDate})
           </Button>
-
-          <Popconfirm
-            title="Run 1:00 AM Cleanup Job Now?"
-            description="Permanently delete allocation records older than 2 days from the temporary archive list? Note: All generated Excel (.xlsx) files in Firebase Storage will be safely kept."
-            onConfirm={handleRunCleanup}
-            okText="Yes, Run Cleanup"
-            cancelText="Cancel"
-            okButtonProps={{ danger: true }}
-          >
-            <Button
-              danger
-              icon={<DeleteOutlined />}
-              loading={cleaningUp}
-              style={{ borderRadius: 8, fontWeight: 700, height: 40 }}
-            >
-              Run 1:00 AM Cleanup (Prune 2+ Days Old)
-            </Button>
-          </Popconfirm>
 
           <Button
             icon={<CalendarOutlined />}
@@ -550,7 +515,7 @@ export default function DailyArchivedReportsPage() {
           type="warning"
           showIcon
           message={<span>Yesterday's allocations (<b>{yesterdayDate}</b>) have not been archived yet.</span>}
-          description="Click 'Archive Yesterday's Data' to compile the 3-day multi-tab Excel archive and upload to Firebase Storage."
+          description="Click 'Archive Yesterday's Data' to compile the daily Excel archive and upload to Firebase Storage."
           style={{ marginBottom: 20, borderRadius: 12 }}
           action={
             <Button size="small" type="primary" onClick={handleArchiveYesterday} loading={archiving}>
@@ -774,7 +739,7 @@ export default function DailyArchivedReportsPage() {
                       </div>
 
                       <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 16 }}>
-                        📁 Includes Target Day + 2 Preceding Days Historical Review
+                        📁 Daily Archive: Current Day Allocations & Summary Breakdown
                       </div>
                     </div>
 
@@ -807,14 +772,16 @@ export default function DailyArchivedReportsPage() {
                       </Button>
 
                       <Popconfirm
-                        title="Delete Daily Archive"
-                        description={`Delete archive record for ${report.date}?`}
-                        onConfirm={() => handleDelete(report.date)}
+                        title="Delete Daily Archive Report"
+                        description={`Delete archive report for ${report.date || report.id}?`}
+                        onConfirm={() => handleDelete(report.id || report.date)}
                         okText="Yes, Delete"
                         cancelText="No"
                         okButtonProps={{ danger: true }}
                       >
-                        <Button danger icon={<DeleteOutlined />} style={{ borderRadius: 8, height: 38 }} />
+                        <Tooltip title="Delete this archived report">
+                          <Button danger icon={<DeleteOutlined />} style={{ borderRadius: 8, height: 38 }} />
+                        </Tooltip>
                       </Popconfirm>
                     </div>
                   </Card>
@@ -869,7 +836,7 @@ export default function DailyArchivedReportsPage() {
       >
         <div style={{ marginTop: 16 }}>
           <Paragraph type="secondary" style={{ color: "#475569" }}>
-            Select any date to compile allocations, generate the 3-day multi-tab Excel sheet, and archive to Firebase Storage:
+            Select any date to compile allocations, generate the daily Excel sheet, and archive to Firebase Storage:
           </Paragraph>
           <div style={{ fontWeight: 600, marginBottom: 8, color: "#0f172a" }}>Target Date:</div>
           <DatePicker
@@ -939,8 +906,8 @@ export default function DailyArchivedReportsPage() {
               <Alert
                 type="info"
                 showIcon
-                message="Raw Transaction Records Pruned (Per 2-Day Retention Schedule)"
-                description="Individual allocation rows for this date have been pruned from the temporary archive list per the 1:00 AM automated cleanup policy. The complete transactions remain permanently preserved in the Excel report. Click the 'Download Excel' button above to access the full workbook."
+                message="No Raw Allocation Records Found For This Date"
+                description="No individual transaction rows were found for this date in the archive list. If an Excel workbook was generated, click the 'Download Excel' button above to view the complete multi-tab report."
                 style={{ marginBottom: 16, borderRadius: 8 }}
               />
             )}

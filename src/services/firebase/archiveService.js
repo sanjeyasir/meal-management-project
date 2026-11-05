@@ -1,5 +1,6 @@
 import { collection, doc, getDoc, getDocs, setDoc, deleteDoc } from "firebase/firestore";
-import { db } from "./config";
+import { ref, deleteObject } from "firebase/storage";
+import { db, storage } from "./config";
 import { getMealAllocations, getMealAllocationsWithArchived, formatDateKey } from "./mealService";
 import { buildMealReportWorkbook } from "../../utils/excelReportGenerator";
 import { normalizePaymentType, getCategories } from "./categoryService";
@@ -89,12 +90,10 @@ export async function getArchivedReportByDate(dateStr) {
  * 
  * REQUIRED WORKFLOW:
  * 1. At 12 AM / Trigger: First archive target day's information to a list in Firestore ('daily_archived_reports').
- * 2. In that same flow, take the 2 days previous meals if present from the allocations store.
- * 3. Generate the 3-day multi-tab Excel (.xlsx) file containing:
+ * 2. Generate the daily Excel (.xlsx) file containing:
  *    - Sheet 1: Target Day Transactions
- *    - Sheet 2: 3-Day Historical Review (Target Day + 2 Previous Days)
- *    - Sheet 3: 3-Day Summary & Statistics Breakdown
- * 4. Archive/upload to Storage via server-side Cloud Function & finalize metadata in Firestore.
+ *    - Sheet 2: Daily Summary & Statistics Breakdown
+ * 3. Archive/upload to Storage via server-side Cloud Function & finalize metadata in Firestore.
  */
 export async function archiveDailyAllocationsForDate(targetDateStr = null, triggeredBy = "System Automated (12:00 AM)") {
   const dateKey = targetDateStr ? formatDateKey(targetDateStr) : getYesterdayDateKey();
@@ -166,27 +165,14 @@ export async function archiveDailyAllocationsForDate(targetDateStr = null, trigg
     await setDoc(docRef, reportMetadata, { merge: true });
 
     // ----------------------------------------------------
-    // STEP 2: IN THE SAME FLOW, TAKE THE 2 PREVIOUS DAYS MEALS IF PRESENT
-    // ----------------------------------------------------
-    const [prevDay1, prevDay2] = getPreviousDaysKeys(dateKey, 2);
-    
-    const [prevAllocs1, prevAllocs2] = await Promise.all([
-      getMealAllocationsWithArchived({ date: prevDay1 }),
-      getMealAllocationsWithArchived({ date: prevDay2 })
-    ]);
-
-    const historicalAllocations = [...prevAllocs1, ...prevAllocs2];
-    const allAllocations = [...targetAllocations, ...historicalAllocations];
-
-    // ----------------------------------------------------
-    // STEP 3: CREATE THE 3-DAY EXCEL WORKBOOK
+    // STEP 2: CREATE THE DAILY EXCEL WORKBOOK (ONLY TARGET DATE)
     // ----------------------------------------------------
     const workbook = await buildMealReportWorkbook({
-      allocations: allAllocations,
+      allocations: targetAllocations,
       targetAllocations,
       targetDate: dateKey,
       title: `HAYLEYS ECO SOLUTIONS - DAILY ALLOCATIONS ARCHIVE REPORT (${dateKey})`,
-      dateRangeStr: `${dateKey} (Includes up to 2 previous days: ${prevDay1}, ${prevDay2})`,
+      dateRangeStr: `${dateKey}`,
       generatedBy: triggeredBy,
       categoryMap: catMap
     });
@@ -194,7 +180,7 @@ export async function archiveDailyAllocationsForDate(targetDateStr = null, trigg
     const buffer = await workbook.xlsx.writeBuffer();
 
     // ----------------------------------------------------
-    // STEP 4: ARCHIVE TO STORAGE ON SERVER & FINALIZE METADATA
+    // STEP 3: ARCHIVE TO STORAGE ON SERVER & FINALIZE METADATA
     // ----------------------------------------------------
     let downloadUrl = "";
 
@@ -215,9 +201,6 @@ export async function archiveDailyAllocationsForDate(targetDateStr = null, trigg
     }
 
     reportMetadata.download_url = downloadUrl;
-    reportMetadata.historical_days_included = [prevDay1, prevDay2];
-    reportMetadata.historical_records_count = historicalAllocations.length;
-    reportMetadata.total_3day_records = allAllocations.length;
 
     await setDoc(docRef, reportMetadata, { merge: true });
 
@@ -233,8 +216,8 @@ export async function archiveDailyAllocationsForDate(targetDateStr = null, trigg
 }
 
 /**
- * Download an archived report directly without CORS errors
- * Uses client-side in-memory ExcelJS generator with Target Day + 2 Previous Days meals
+ * Download an archived report directly
+ * Uses preserved Cloud Storage object URL if available, with client-side ExcelJS fallback
  */
 export async function downloadArchivedReport(report) {
   if (!report) return;
@@ -242,14 +225,26 @@ export async function downloadArchivedReport(report) {
   const dateKey = formatDateKey(report.date || report.id);
   const filename = report.filename || `Daily_Meal_Allocations_${dateKey}.xlsx`;
 
-  try {
-    // 1. Fetch Target Day allocations + 2 Previous Days allocations from Firestore (CORS-free)
-    const [prevDay1, prevDay2] = getPreviousDaysKeys(dateKey, 2);
+  // 1. If Cloud Storage download URL is available, trigger direct download
+  if (report.download_url && typeof report.download_url === "string" && report.download_url.startsWith("http")) {
+    try {
+      const a = document.createElement("a");
+      a.href = report.download_url;
+      a.download = filename;
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      return { success: true };
+    } catch (e) {
+      console.warn("Direct storage download fallback:", e);
+    }
+  }
 
-    const [targetAllocations, prevAllocs1, prevAllocs2, cats] = await Promise.all([
+  // 2. Client-side fallback generator from preserved Firestore archive data (Only Target Date)
+  try {
+    const [targetAllocations, cats] = await Promise.all([
       getMealAllocationsWithArchived({ date: dateKey }),
-      getMealAllocationsWithArchived({ date: prevDay1 }),
-      getMealAllocationsWithArchived({ date: prevDay2 }),
       getCategories().catch(() => [])
     ]);
 
@@ -260,16 +255,12 @@ export async function downloadArchivedReport(report) {
       }
     });
 
-    const historicalAllocations = [...prevAllocs1, ...prevAllocs2];
-    const allAllocations = [...targetAllocations, ...historicalAllocations];
-
-    // 2. Build multi-tab 3-day workbook directly in the browser
     const workbook = await buildMealReportWorkbook({
-      allocations: allAllocations,
+      allocations: targetAllocations,
       targetAllocations,
       targetDate: dateKey,
       title: `HAYLEYS ECO SOLUTIONS - DAILY ALLOCATIONS ARCHIVE REPORT (${dateKey})`,
-      dateRangeStr: `${dateKey} (Includes up to 2 previous days: ${prevDay1}, ${prevDay2})`,
+      dateRangeStr: `${dateKey}`,
       generatedBy: "Web App Download",
       categoryMap: catMap
     });
@@ -279,7 +270,6 @@ export async function downloadArchivedReport(report) {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     });
 
-    // 3. Trigger seamless direct client download
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -297,13 +287,34 @@ export async function downloadArchivedReport(report) {
 }
 
 /**
- * Delete an archived daily report doc from Firestore
+ * Delete an archived daily report doc and its Storage file
  */
-export async function deleteArchivedReport(dateStr) {
+export async function deleteArchivedReport(dateOrId) {
   try {
-    const cleanDate = formatDateKey(dateStr);
-    const docRef = doc(db, ARCHIVE_COLLECTION, cleanDate);
+    const cleanId = String(dateOrId || "").trim();
+    if (!cleanId) return { success: false, error: "Report ID or date is required." };
+
+    // 1. Delete from Firestore daily_archived_reports
+    const docRef = doc(db, ARCHIVE_COLLECTION, cleanId);
     await deleteDoc(docRef);
+
+    // 2. Delete Excel file from Firebase Storage
+    try {
+      const storageRef = ref(storage, `${STORAGE_FOLDER}/Daily_Meal_Allocations_${cleanId}.xlsx`);
+      await deleteObject(storageRef);
+    } catch (storageErr) {
+      // Storage file might already be removed or direct bucket path
+    }
+
+    // 3. Notify backend API to clean storage bucket
+    try {
+      await fetch(`${API_BASE_URL}/reports/archive-daily?id=${encodeURIComponent(cleanId)}`, {
+        method: "DELETE"
+      });
+    } catch (apiErr) {
+      console.warn("Backend storage delete notice:", apiErr.message);
+    }
+
     return { success: true };
   } catch (error) {
     console.error("Error deleting archived report:", error);
@@ -312,22 +323,9 @@ export async function deleteArchivedReport(dateStr) {
 }
 
 /**
- * Trigger cleanup of 2+ days old archived allocations on Cloud Functions server (1:00 AM job manual trigger)
+ * Cleanup / deletion is permanently disabled per business requirements.
  */
-export async function triggerArchivedCleanup(retentionDays = 2, triggeredBy = "Admin Console Cleanup") {
-  try {
-    const resp = await fetch(`${API_BASE_URL}/reports/cleanup-archived`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ retentionDays, triggeredBy })
-    });
-    if (!resp.ok) {
-      throw new Error(`Server returned status HTTP ${resp.status}`);
-    }
-    const data = await resp.json();
-    return data;
-  } catch (error) {
-    console.error("Error triggering cleanup of archived allocations:", error);
-    throw error;
-  }
+export async function triggerArchivedCleanup(retentionDays = 2, triggeredBy = "Admin Console") {
+  console.warn("triggerArchivedCleanup is disabled. Archive records are permanently preserved.");
+  return { success: true, message: "Archive record deletion is disabled. All records are permanently preserved." };
 }

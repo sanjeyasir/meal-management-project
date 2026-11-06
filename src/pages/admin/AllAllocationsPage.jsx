@@ -46,6 +46,11 @@ export default function AllAllocationsPage() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [employeeMap, setEmployeeMap] = useState(new Map());
+
+  // Default strictly to the previous day (yesterday)
+  const yesterdayDayjs = dayjs().subtract(1, "day");
+  const [dateRange, setDateRange] = useState([yesterdayDayjs, yesterdayDayjs]);
 
   // Filters State
   const [searchText, setSearchText] = useState("");
@@ -53,15 +58,31 @@ export default function AllAllocationsPage() {
   const [mealTypeFilter, setMealTypeFilter] = useState("ALL");
   const [payCategoryFilter, setPayCategoryFilter] = useState("ALL");
   const [companyFilter, setCompanyFilter] = useState("ALL");
-  const [dateRange, setDateRange] = useState(null); // From-To Range [dayjs, dayjs]
 
   const todayStr = formatDateKey(new Date());
 
-  const loadAllocations = async () => {
+  const loadAllocations = async (rangeOverride) => {
     setLoading(true);
     try {
+      const activeRange = rangeOverride !== undefined ? rangeOverride : dateRange;
+      let queryFilter = {};
+
+      if (activeRange && activeRange[0] && activeRange[1]) {
+        const fromStr = activeRange[0].format("YYYY-MM-DD");
+        const toStr = activeRange[1].format("YYYY-MM-DD");
+        if (fromStr === toStr) {
+          queryFilter = { date: fromStr };
+        } else {
+          queryFilter = { fromDate: fromStr, toDate: toStr };
+        }
+      } else {
+        // Fallback: strictly obtain the previous day's allocation
+        const yesterdayStr = dayjs().subtract(1, "day").format("YYYY-MM-DD");
+        queryFilter = { date: yesterdayStr };
+      }
+
       const [allData, allComps, allCats, allEmps] = await Promise.all([
-        getMealAllocationsWithArchived(),
+        getMealAllocationsWithArchived(queryFilter),
         getCompanies(),
         getCategories(),
         getEmployees()
@@ -76,15 +97,21 @@ export default function AllAllocationsPage() {
 
       const empMap = new Map();
       (allEmps || []).forEach((e) => {
-        const id = String(e.employee_id || e.emp_id || e.id || "").trim().toLowerCase();
-        if (id) empMap.set(id, e);
+        const id1 = String(e.employee_id || "").trim().toLowerCase();
+        const id2 = String(e.emp_id || "").trim().toLowerCase();
+        const id3 = String(e.id || "").trim().toLowerCase();
+        if (id1) empMap.set(id1, e);
+        if (id2) empMap.set(id2, e);
+        if (id3) empMap.set(id3, e);
       });
+      setEmployeeMap(empMap);
 
       const mappedAllocations = (allData || []).map((item) => {
         const cleanEmpId = String(item.employee_id || item.emp_id || "").trim().toLowerCase();
         const emp = empMap.get(cleanEmpId);
-        const mappedName = emp?.name || emp?.full_name || item.employee_name || item.name || "Employee";
-        const mappedCompany = emp?.company || item.company || "Hayleys Eco Solutions";
+        const mappedName = emp?.name || emp?.full_name || emp?.employee_name || item.employee_name || item.name || "Employee";
+        // Map employee company accurately by looking up employee ID
+        const mappedCompany = emp?.company || emp?.company_name || item.company || "Hayleys Eco Solutions";
         const mappedCategory = emp?.category_employment || emp?.category_name || item.category_name || item.category_employment || "Staff";
         const resolvedPay = emp?.pay_category
           ? normalizePaymentType(emp.pay_category)
@@ -103,7 +130,7 @@ export default function AllAllocationsPage() {
         };
       });
 
-      // Filter entries to come from previous days (archived historical allocations where date < today)
+      // Filter entries strictly to previous days (where date < today)
       const pastAllocations = mappedAllocations.filter((item) => item.date && item.date < todayStr);
       setAllocations(pastAllocations);
       setCompanies(allComps);
@@ -117,8 +144,13 @@ export default function AllAllocationsPage() {
   };
 
   useEffect(() => {
-    loadAllocations();
+    loadAllocations([yesterdayDayjs, yesterdayDayjs]);
   }, []);
+
+  const handleDateRangeChange = (dates) => {
+    setDateRange(dates);
+    loadAllocations(dates);
+  };
 
   // Category to Subsidy Map
   const categoryMap = useMemo(() => {
@@ -201,7 +233,8 @@ export default function AllAllocationsPage() {
         title: "HAYLEYS ECO SOLUTIONS - PREVIOUS DAY ALLOCATIONS REPORT",
         dateRangeStr: dateRangeLabel,
         generatedBy: "System Administrator",
-        categoryMap
+        categoryMap,
+        employeeMap
       });
 
       message.success("Previous allocations Excel report exported successfully!");
@@ -406,15 +439,24 @@ export default function AllAllocationsPage() {
         bodyStyle={{ padding: "16px 20px" }}
       >
         <Row gutter={[12, 12]} align="middle">
-          <Col xs={24} sm={12} md={6}>
+          <Col xs={24} sm={12} md={7}>
             <Text strong style={{ display: "block", marginBottom: 4, fontSize: 12, color: "#0f172a" }}>
               Filter by Date Range (From - To):
             </Text>
             <RangePicker
               style={{ width: "100%" }}
               value={dateRange}
-              onChange={setDateRange}
+              onChange={handleDateRangeChange}
               placeholder={["From Date", "To Date"]}
+              disabledDate={(current) => current && current >= dayjs().startOf("day")}
+              allowClear={false}
+              presets={[
+                { label: "Yesterday", value: [dayjs().subtract(1, "day"), dayjs().subtract(1, "day")] },
+                { label: "Previous 3 Days", value: [dayjs().subtract(3, "days"), dayjs().subtract(1, "day")] },
+                { label: "Previous 7 Days", value: [dayjs().subtract(7, "days"), dayjs().subtract(1, "day")] },
+                { label: "Previous 14 Days", value: [dayjs().subtract(14, "days"), dayjs().subtract(1, "day")] },
+                { label: "Previous 30 Days", value: [dayjs().subtract(30, "days"), dayjs().subtract(1, "day")] }
+              ]}
             />
           </Col>
 

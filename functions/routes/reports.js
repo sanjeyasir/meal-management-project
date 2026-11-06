@@ -104,7 +104,7 @@ function normalizePaymentType(type) {
 /**
  * Helper to populate a standard meal transactions worksheet
  */
-function populateTransactionsSheet(worksheet, { allocations = [], title = "", subtitle = "", catMap = {} }) {
+function populateTransactionsSheet(worksheet, { allocations = [], title = "", subtitle = "", catMap = {}, empMap = null }) {
   worksheet.views = [{ showGridLines: true, state: "frozen", ySplit: 3 }];
 
   // 1. Report Title & Header Banner
@@ -158,15 +158,21 @@ function populateTransactionsSheet(worksheet, { allocations = [], title = "", su
   // 4. Rows
   allocations.forEach((item, index) => {
     const isRecv = (item.status || "").toLowerCase() === "recieved" || (item.status || "").toLowerCase() === "received" || item.received === true;
-    const cat = (item.category_name || item.category_employment || item.employee_category || "Staff").trim();
-    const masterSubsidy = catMap[cat.toLowerCase()] || item.pay_category || item.configuration_detail;
+    const cleanId = String(item.employee_id || item.emp_id || "").trim().toLowerCase();
+    const emp = empMap ? (empMap.get(cleanId) || empMap.get(String(item.employee_id || item.emp_id || "").trim())) : null;
+
+    // Accurately map company and details from employee ID lookup
+    const resolvedCompany = emp?.company || emp?.company_name || item.company || "Hayleys Eco Solutions";
+    const resolvedName = emp?.name || emp?.full_name || emp?.employee_name || item.employee_name || item.name || "-";
+    const cat = (emp?.category_employment || emp?.category_name || item.category_name || item.category_employment || item.employee_category || "Staff").trim();
+    const masterSubsidy = emp?.pay_category || catMap[cat.toLowerCase()] || item.pay_category || item.configuration_detail;
     const normPay = normalizePaymentType(masterSubsidy);
 
     const row = worksheet.addRow([
       item.date || "-",
       item.employee_id || item.emp_id || "-",
-      item.employee_name || item.name || "-",
-      item.company || "Hayleys Eco Solutions",
+      resolvedName,
+      resolvedCompany,
       cat,
       normPay,
       item.meal_type || "-",
@@ -230,9 +236,10 @@ async function archiveDailyAllocations(targetDate = null, triggeredBy = "Automat
   // ----------------------------------------------------
   // STEP 1: DUMP TARGET DAY'S DATA INTO ARCHIVED_MEALS_COLLECTION (NO DELETION)
   // ----------------------------------------------------
-  const [activeSnap, catSnap] = await Promise.all([
+  const [activeSnap, catSnap, empSnap] = await Promise.all([
     db.collection(MEAL_COLLECTION).where("date", "==", dateKey).get(),
-    db.collection("employee_categories").get()
+    db.collection("employee_categories").get(),
+    db.collection("employees").get()
   ]);
 
   const catMap = {};
@@ -243,9 +250,20 @@ async function archiveDailyAllocations(targetDate = null, triggeredBy = "Automat
     }
   });
 
+  const empMap = new Map();
+  empSnap.forEach((docSnap) => {
+    const d = docSnap.data();
+    const docId = String(docSnap.id || "").trim().toLowerCase();
+    const empId = String(d.employee_id || d.emp_id || "").trim().toLowerCase();
+    if (docId) empMap.set(docId, d);
+    if (empId) empMap.set(empId, d);
+  });
+
   const getAutoSubsidy = (item) => {
-    const cat = (item.category_name || item.category_employment || item.employee_category || "Staff").trim();
-    const masterSubsidy = catMap[cat.toLowerCase()] || item.pay_category || item.configuration_detail;
+    const cleanId = String(item.employee_id || item.emp_id || "").trim().toLowerCase();
+    const emp = empMap.get(cleanId);
+    const cat = (emp?.category_employment || emp?.category_name || item.category_name || item.category_employment || item.employee_category || "Staff").trim();
+    const masterSubsidy = emp?.pay_category || catMap[cat.toLowerCase()] || item.pay_category || item.configuration_detail;
     return normalizePaymentType(masterSubsidy);
   };
 
@@ -258,10 +276,18 @@ async function archiveDailyAllocations(targetDate = null, triggeredBy = "Automat
 
     for (const docSnap of activeSnap.docs) {
       const data = docSnap.data();
+      const cleanId = String(data.employee_id || data.emp_id || "").trim().toLowerCase();
+      const emp = empMap.get(cleanId);
+      const resolvedCompany = emp?.company || emp?.company_name || data.company || "Hayleys Eco Solutions";
+      const resolvedName = emp?.name || emp?.full_name || emp?.employee_name || data.employee_name || data.name || "Employee";
+      const resolvedCat = emp?.category_employment || emp?.category_name || data.category_name || data.category_employment || "Staff";
       const archiveRef = db.collection(ARCHIVED_MEALS_COLLECTION).doc(docSnap.id);
 
       batch.set(archiveRef, {
         ...data,
+        company: resolvedCompany,
+        employee_name: resolvedName,
+        category_name: resolvedCat,
         archived_to_list_at: new Date().toISOString(),
         archived_by: triggeredBy
       }, { merge: true });
@@ -352,7 +378,8 @@ async function archiveDailyAllocations(targetDate = null, triggeredBy = "Automat
     allocations: targetAllocations,
     title: `HAYLEYS ECO SOLUTIONS - DAILY ALLOCATIONS ARCHIVE (${dateKey})`,
     subtitle: `Archive Date: ${dateKey}  |  Archived on: ${nowSL} (Sri Lanka Time)  |  Trigger: ${triggeredBy}  |  Total Entries: ${targetAllocations.length}`,
-    catMap
+    catMap,
+    empMap
   });
 
   // Tab 2: Daily Summary & Statistics Breakdown
@@ -693,9 +720,10 @@ router.get("/download-excel", async (req, res) => {
     const ExcelJS = require("exceljs");
     const targetDate = req.query?.date ? formatDateKey(req.query.date) : getYesterdaySriLankaDate();
 
-    const [targetAllocations, catSnap] = await Promise.all([
+    const [targetAllocations, catSnap, empSnap] = await Promise.all([
       getAllocationsForDate(targetDate),
-      db.collection("employee_categories").get()
+      db.collection("employee_categories").get(),
+      db.collection("employees").get()
     ]);
 
     const catMap = {};
@@ -704,6 +732,15 @@ router.get("/download-excel", async (req, res) => {
       if (data.category_name) {
         catMap[data.category_name.toLowerCase()] = data.configuration_detail;
       }
+    });
+
+    const empMap = new Map();
+    empSnap.forEach((docSnap) => {
+      const d = docSnap.data();
+      const docId = String(docSnap.id || "").trim().toLowerCase();
+      const empId = String(d.employee_id || d.emp_id || "").trim().toLowerCase();
+      if (docId) empMap.set(docId, d);
+      if (empId) empMap.set(empId, d);
     });
 
     const nowSL = formatSriLankaDateTime(new Date());
@@ -717,7 +754,8 @@ router.get("/download-excel", async (req, res) => {
       allocations: targetAllocations,
       title: `HAYLEYS ECO SOLUTIONS - DAILY ALLOCATIONS ARCHIVE (${targetDate})`,
       subtitle: `Archive Date: ${targetDate}  |  Generated on: ${nowSL}  |  Total Entries: ${targetAllocations.length}`,
-      catMap
+      catMap,
+      empMap
     });
 
     // Tab 2: Daily Summary & Statistics Breakdown

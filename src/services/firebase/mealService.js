@@ -144,6 +144,15 @@ export async function getMealAllocations(filters = {}) {
     }
     if (filters.date) {
       constraints.push(where("date", "==", formatDateKey(filters.date)));
+    } else if (filters.fromDate && filters.toDate) {
+      const fromStr = formatDateKey(filters.fromDate);
+      const toStr = formatDateKey(filters.toDate);
+      if (fromStr === toStr) {
+        constraints.push(where("date", "==", fromStr));
+      } else {
+        constraints.push(where("date", ">=", fromStr));
+        constraints.push(where("date", "<=", toStr));
+      }
     }
     if (filters.status) {
       constraints.push(where("status", "==", filters.status));
@@ -189,6 +198,15 @@ export async function getArchivedMealAllocations(filters = {}) {
     }
     if (filters.date) {
       constraints.push(where("date", "==", formatDateKey(filters.date)));
+    } else if (filters.fromDate && filters.toDate) {
+      const fromStr = formatDateKey(filters.fromDate);
+      const toStr = formatDateKey(filters.toDate);
+      if (fromStr === toStr) {
+        constraints.push(where("date", "==", fromStr));
+      } else {
+        constraints.push(where("date", ">=", fromStr));
+        constraints.push(where("date", "<=", toStr));
+      }
     }
     if (filters.status) {
       constraints.push(where("status", "==", filters.status));

@@ -1,6 +1,7 @@
 import ExcelJS from "exceljs";
 import { formatSriLankaDateTime, getSriLankaNowFormatted } from "./timeUtils";
 import { normalizePaymentType, getCategories } from "../services/firebase/categoryService";
+import { getEmployees } from "../services/firebase/employeeService";
 
 /**
  * Helper to populate a standard meal transactions worksheet
@@ -9,7 +10,8 @@ function populateTransactionsSheet(worksheet, {
   allocations = [],
   title = "MEAL MANAGEMENT SYSTEM - ALLOCATIONS TRANSACTION REPORT",
   subtitle = "",
-  catMap = {}
+  catMap = {},
+  empMap = null
 }) {
   // Freeze top 3 rows
   worksheet.views = [{ showGridLines: true, state: "frozen", ySplit: 3 }];
@@ -74,16 +76,22 @@ function populateTransactionsSheet(worksheet, {
       (item.status || "").toLowerCase() === "received" ||
       item.received === true;
 
-    const categoryName = item.category_name || item.category_employment || item.employee_category || "Staff";
-    const masterSubsidy = item.pay_category || catMap[categoryName.toLowerCase()] || item.configuration_detail;
+    const cleanEmpId = String(item.employee_id || item.emp_id || "").trim().toLowerCase();
+    const emp = empMap ? (empMap instanceof Map ? empMap.get(cleanEmpId) : empMap[cleanEmpId]) : null;
+
+    // Accurately map company by looking up the employee ID
+    const resolvedCompany = emp?.company || emp?.company_name || item.company || "Hayleys Eco Solutions";
+    const resolvedName = emp?.name || emp?.full_name || emp?.employee_name || item.employee_name || item.name || "-";
+    const categoryName = emp?.category_employment || emp?.category_name || item.category_name || item.category_employment || item.employee_category || "Staff";
+    const masterSubsidy = emp?.pay_category || item.pay_category || catMap[categoryName.toLowerCase()] || item.configuration_detail;
     const normalizedPayment = normalizePaymentType(masterSubsidy);
     const mealCount = item.quantity || 1;
 
     const row = worksheet.addRow([
       item.date || "-",
       item.employee_id || item.emp_id || "-",
-      item.employee_name || item.name || "-",
-      item.company || "Hayleys Eco Solutions",
+      resolvedName,
+      resolvedCompany,
       categoryName,
       normalizedPayment,
       item.meal_type || "-",
@@ -169,7 +177,8 @@ export async function buildMealReportWorkbook({
   title = "HAYLEYS ECO SOLUTIONS - DAILY MEAL ALLOCATIONS ARCHIVE REPORT",
   dateRangeStr = "Daily Archive",
   generatedBy = "System Administrator",
-  categoryMap = null
+  categoryMap = null,
+  employeeMap = null
 }) {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "Hayleys Meal Management System";
@@ -188,6 +197,25 @@ export async function buildMealReportWorkbook({
       });
     } catch (e) {
       catMap = {};
+    }
+  }
+
+  // Load employee lookup map if not passed
+  let empMap = employeeMap;
+  if (!empMap) {
+    try {
+      const emps = await getEmployees();
+      empMap = new Map();
+      (emps || []).forEach((e) => {
+        const id1 = String(e.employee_id || "").trim().toLowerCase();
+        const id2 = String(e.emp_id || "").trim().toLowerCase();
+        const id3 = String(e.id || "").trim().toLowerCase();
+        if (id1) empMap.set(id1, e);
+        if (id2) empMap.set(id2, e);
+        if (id3) empMap.set(id3, e);
+      });
+    } catch (e) {
+      empMap = null;
     }
   }
 
@@ -211,7 +239,8 @@ export async function buildMealReportWorkbook({
     allocations: targetList,
     title: `HAYLEYS ECO SOLUTIONS - DAILY ALLOCATIONS ARCHIVE (${effectiveTargetDate})`,
     subtitle: `Archive Date: ${effectiveTargetDate}  |  Generated on: ${sriLankaNow} (Sri Jayawardenepura Time)  |  By: ${generatedBy}  |  Total Entries: ${targetList.length}`,
-    catMap
+    catMap,
+    empMap
   });
 
   // ----------------------------------------------------
@@ -337,6 +366,8 @@ export async function generateTransactionEntriesReport({
   title = "MEAL MANAGEMENT SYSTEM - ALLOCATIONS TRANSACTION REPORT",
   dateRangeStr = "All Records",
   generatedBy = "System Administrator",
+  categoryMap = null,
+  employeeMap = null,
   customFilename = null
 }) {
   const workbook = await buildMealReportWorkbook({
@@ -345,7 +376,9 @@ export async function generateTransactionEntriesReport({
     targetDate,
     title,
     dateRangeStr,
-    generatedBy
+    generatedBy,
+    categoryMap,
+    employeeMap
   });
 
   const buffer = await workbook.xlsx.writeBuffer();

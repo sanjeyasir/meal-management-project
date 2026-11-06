@@ -4,6 +4,7 @@ import { db, storage } from "./config";
 import { getMealAllocations, getMealAllocationsWithArchived, formatDateKey } from "./mealService";
 import { buildMealReportWorkbook } from "../../utils/excelReportGenerator";
 import { normalizePaymentType, getCategories } from "./categoryService";
+import { getEmployees } from "./employeeService";
 import { getSriLankaNowFormatted } from "../../utils/timeUtils";
 
 const ARCHIVE_COLLECTION = "daily_archived_reports";
@@ -104,7 +105,11 @@ export async function archiveDailyAllocationsForDate(targetDateStr = null, trigg
     // ----------------------------------------------------
     // STEP 1: ARCHIVE THE TARGET DAY'S DATA TO THE LIST FIRST
     // ----------------------------------------------------
-    const targetAllocations = await getMealAllocationsWithArchived({ date: dateKey });
+    const [targetAllocations, cats, emps] = await Promise.all([
+      getMealAllocationsWithArchived({ date: dateKey }),
+      getCategories().catch(() => []),
+      getEmployees().catch(() => [])
+    ]);
 
     const totalAllocations = targetAllocations.length;
     const dispensedCount = targetAllocations.filter(
@@ -117,21 +122,28 @@ export async function archiveDailyAllocationsForDate(targetDateStr = null, trigg
     const dinnerCount = targetAllocations.filter(a => a.meal_type === "Dinner").length;
 
     // Load master categories for subsidy resolution
-    let catMap = {};
-    try {
-      const cats = await getCategories();
-      cats.forEach((c) => {
-        if (c.category_name) {
-          catMap[c.category_name.toLowerCase()] = c.configuration_detail;
-        }
-      });
-    } catch (e) {
-      catMap = {};
-    }
+    const catMap = {};
+    (cats || []).forEach((c) => {
+      if (c.category_name) {
+        catMap[c.category_name.toLowerCase()] = c.configuration_detail;
+      }
+    });
+
+    const empMap = new Map();
+    (emps || []).forEach((e) => {
+      const id1 = String(e.employee_id || "").trim().toLowerCase();
+      const id2 = String(e.emp_id || "").trim().toLowerCase();
+      const id3 = String(e.id || "").trim().toLowerCase();
+      if (id1) empMap.set(id1, e);
+      if (id2) empMap.set(id2, e);
+      if (id3) empMap.set(id3, e);
+    });
 
     const getSubsidy = (a) => {
-      const cat = (a.category_name || a.category_employment || a.employee_category || "Staff").trim();
-      const masterSubsidy = catMap[cat.toLowerCase()] || a.pay_category || a.configuration_detail;
+      const cleanEmpId = String(a.employee_id || a.emp_id || "").trim().toLowerCase();
+      const emp = empMap.get(cleanEmpId);
+      const cat = (emp?.category_employment || emp?.category_name || a.category_name || a.category_employment || a.employee_category || "Staff").trim();
+      const masterSubsidy = emp?.pay_category || catMap[cat.toLowerCase()] || a.pay_category || a.configuration_detail;
       return normalizePaymentType(masterSubsidy);
     };
 
@@ -174,7 +186,8 @@ export async function archiveDailyAllocationsForDate(targetDateStr = null, trigg
       title: `HAYLEYS ECO SOLUTIONS - DAILY ALLOCATIONS ARCHIVE REPORT (${dateKey})`,
       dateRangeStr: `${dateKey}`,
       generatedBy: triggeredBy,
-      categoryMap: catMap
+      categoryMap: catMap,
+      employeeMap: empMap
     });
 
     const buffer = await workbook.xlsx.writeBuffer();
@@ -243,16 +256,27 @@ export async function downloadArchivedReport(report) {
 
   // 2. Client-side fallback generator from preserved Firestore archive data (Only Target Date)
   try {
-    const [targetAllocations, cats] = await Promise.all([
+    const [targetAllocations, cats, emps] = await Promise.all([
       getMealAllocationsWithArchived({ date: dateKey }),
-      getCategories().catch(() => [])
+      getCategories().catch(() => []),
+      getEmployees().catch(() => [])
     ]);
 
     const catMap = {};
-    cats.forEach((c) => {
+    (cats || []).forEach((c) => {
       if (c.category_name) {
         catMap[c.category_name.toLowerCase()] = c.configuration_detail;
       }
+    });
+
+    const empMap = new Map();
+    (emps || []).forEach((e) => {
+      const id1 = String(e.employee_id || "").trim().toLowerCase();
+      const id2 = String(e.emp_id || "").trim().toLowerCase();
+      const id3 = String(e.id || "").trim().toLowerCase();
+      if (id1) empMap.set(id1, e);
+      if (id2) empMap.set(id2, e);
+      if (id3) empMap.set(id3, e);
     });
 
     const workbook = await buildMealReportWorkbook({
@@ -262,7 +286,8 @@ export async function downloadArchivedReport(report) {
       title: `HAYLEYS ECO SOLUTIONS - DAILY ALLOCATIONS ARCHIVE REPORT (${dateKey})`,
       dateRangeStr: `${dateKey}`,
       generatedBy: "Web App Download",
-      categoryMap: catMap
+      categoryMap: catMap,
+      employeeMap: empMap
     });
 
     const buffer = await workbook.xlsx.writeBuffer();

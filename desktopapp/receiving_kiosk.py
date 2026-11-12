@@ -292,54 +292,72 @@ class ReceivingKioskApp(ctk.CTk):
             corner_radius=20,
             border_width=1,
             border_color=COLORS["card_border"],
+            width=640,
         )
-        standby_card.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.98, relheight=0.94)
-
-        # 2-Column Split Grid
-        col_grid = ctk.CTkFrame(standby_card, fg_color="transparent")
-        col_grid.pack(fill="both", expand=True, padx=16, pady=12)
-        col_grid.columnconfigure(0, weight=55)  # Left: Collect & On-Screen Keypad
-        col_grid.columnconfigure(1, weight=45)  # Right: Live Port Listener Terminal
-        col_grid.rowconfigure(0, weight=1)
+        standby_card.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.58, relheight=0.96)
 
         # =========================================================
-        # LEFT PANEL: SCANNER, SERVING HOURS & ON-SCREEN KEYPAD
+        # PROMINENT TITLE HEADER: SINHALA & ENGLISH
         # =========================================================
-        left_panel = ctk.CTkFrame(col_grid, fg_color=COLORS["input_bg"], corner_radius=16)
-        left_panel.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=0)
+        title_box = ctk.CTkFrame(standby_card, fg_color="transparent")
+        title_box.pack(fill="x", padx=20, pady=(12, 4))
 
-        # Prompt Banner
-        prompt_box = ctk.CTkFrame(left_panel, fg_color="transparent")
-        prompt_box.pack(fill="x", padx=16, pady=(10, 4))
+        ctk.CTkLabel(
+            title_box,
+            text="MEAL MANAGEMENT SYSTEM",
+            font=(FONT_FAMILY, 24, "bold"),
+            text_color="#60A5FA",
+        ).pack(anchor="center")
+
+        ctk.CTkLabel(
+            title_box,
+            text="ආහාර කළමනාකරණ පද්ධතිය",
+            font=(FONT_FAMILY, 19, "bold"),
+            text_color="#FCD34D",
+        ).pack(anchor="center", pady=(1, 2))
+
+        ctk.CTkLabel(
+            title_box,
+            text="Meal Dispensing & Verification Kiosk  |  කෑම ලබාගැනීමේ පද්ධතිය  |  உணவு விநியோகம்",
+            font=(FONT_FAMILY, 12, "bold"),
+            text_color=COLORS["text_muted"],
+        ).pack(anchor="center")
+
+        # =========================================================
+        # SCANNER PROMPT BANNER
+        # =========================================================
+        prompt_box = ctk.CTkFrame(standby_card, fg_color="transparent")
+        prompt_box.pack(fill="x", padx=20, pady=(4, 3))
 
         title_row = ctk.CTkFrame(prompt_box, fg_color="transparent")
         title_row.pack(anchor="center")
-        ctk.CTkLabel(title_row, text="🍲", font=(FONT_FAMILY, 28)).pack(side="left", padx=(0, 8))
+        ctk.CTkLabel(title_row, text="🍲", font=(FONT_FAMILY, 24)).pack(side="left", padx=(0, 6))
         ctk.CTkLabel(
             title_row,
             text="SCAN FINGERPRINT OR ENTER ID",
-            font=(FONT_FAMILY, 19, "bold"),
-            text_color="#60A5FA",
+            font=(FONT_FAMILY, 16, "bold"),
+            text_color="#38BDF8",
         ).pack(side="left")
 
         ctk.CTkLabel(
             prompt_box,
             text="කෑම ලබාගැනීමට ඇඟිලි සලකුණ තබන්න හෝ සේවක අංකය ඇතුළත් කරන්න\nதயவுசெய்து உங்கள் கைரேகையை வைக்கவும் அல்லது ஊழியர் எண்ணை உள்ளிடவும்",
-            font=(FONT_FAMILY, 13, "bold"),
+            font=(FONT_FAMILY, 11, "bold"),
             text_color=COLORS["text_muted"],
             justify="center",
+            wraplength=560,
         ).pack(anchor="center", pady=(2, 0))
 
         # Serving Windows Summary Box (Compact)
         timeslot_card = ctk.CTkFrame(
-            left_panel, fg_color=COLORS["card_bg"], corner_radius=10, border_width=1, border_color=COLORS["card_border"]
+            standby_card, fg_color=COLORS["input_bg"], corner_radius=10, border_width=1, border_color=COLORS["card_border"]
         )
-        timeslot_card.pack(pady=(4, 8), padx=16, fill="x", ipady=4)
+        timeslot_card.pack(pady=(3, 4), padx=20, fill="x", ipady=3)
 
         slots_text = (
-            f"🕒 Canteen Hours: ☕ Breakfast {SERVING_WINDOWS['Breakfast']['display']} (උදෑසන • காலை)  |  "
-            f"🍲 Lunch {SERVING_WINDOWS['Lunch']['display']} (දවල් • மதியம்)  |  "
-            f"🍽️ Dinner {SERVING_WINDOWS['Dinner']['display']} (රාත්‍රී • இரவு)"
+            f"🕒 Canteen Hours: ☕ Breakfast {SERVING_WINDOWS['Breakfast']['display']} (උදෑසන)  |  "
+            f"🍲 Lunch {SERVING_WINDOWS['Lunch']['display']} (දවල්)  |  "
+            f"🍽️ Dinner {SERVING_WINDOWS['Dinner']['display']} (රාත්‍රී)"
         )
         ctk.CTkLabel(
             timeslot_card,
@@ -347,11 +365,12 @@ class ReceivingKioskApp(ctk.CTk):
             font=(FONT_FAMILY, 11, "bold"),
             text_color=COLORS["accent_green"],
             justify="center",
+            wraplength=560,
         ).pack()
 
         # Stats bar banner
-        self.stats_bar_container = ctk.CTkFrame(left_panel, fg_color="#0f172a", corner_radius=8)
-        self.stats_bar_container.pack(fill="x", padx=16, pady=(0, 6), ipady=2)
+        self.stats_bar_container = ctk.CTkFrame(standby_card, fg_color="#0f172a", corner_radius=8)
+        self.stats_bar_container.pack(fill="x", padx=20, pady=(0, 4), ipady=2)
 
         self.stats_label = ctk.CTkLabel(
             self.stats_bar_container,
@@ -364,20 +383,20 @@ class ReceivingKioskApp(ctk.CTk):
         # =========================================================
         # ON-SCREEN TOUCH KEYPAD CONTAINER
         # =========================================================
-        keypad_card = ctk.CTkFrame(left_panel, fg_color=COLORS["card_bg"], corner_radius=14, border_width=1, border_color=COLORS["card_border"])
-        keypad_card.pack(fill="x", padx=16, pady=(0, 6), ipady=4)
+        keypad_card = ctk.CTkFrame(standby_card, fg_color=COLORS["input_bg"], corner_radius=14, border_width=1, border_color=COLORS["card_border"])
+        keypad_card.pack(fill="x", padx=20, pady=(0, 4), ipady=3)
 
         # PIN Entry Display Field
         display_frame = ctk.CTkFrame(keypad_card, fg_color="transparent")
-        display_frame.pack(fill="x", padx=14, pady=(8, 6))
+        display_frame.pack(fill="x", padx=16, pady=(6, 4))
 
         self.manual_entry = ctk.CTkEntry(
             display_frame,
             placeholder_text="Enter Employee ID (e.g. 641)  |  සේවක අංකය  |  ஊழியர் எண்",
-            font=(FONT_FAMILY, 19, "bold"),
-            height=46,
+            font=(FONT_FAMILY, 17, "bold"),
+            height=44,
             justify="center",
-            fg_color=COLORS["input_bg"],
+            fg_color=COLORS["card_bg"],
             border_color="#3B82F6",
             border_width=1,
             text_color=COLORS["text_main"],
@@ -388,7 +407,7 @@ class ReceivingKioskApp(ctk.CTk):
 
         # Keypad 3x4 Grid
         keypad_grid = ctk.CTkFrame(keypad_card, fg_color="transparent")
-        keypad_grid.pack(padx=14, pady=(0, 6))
+        keypad_grid.pack(padx=16, pady=(0, 4))
 
         keys = [
             ["1", "2", "3"],
@@ -415,49 +434,49 @@ class ReceivingKioskApp(ctk.CTk):
                 btn = ctk.CTkButton(
                     keypad_grid,
                     text=key_label,
-                    font=(FONT_FAMILY, 16, "bold"),
+                    font=(FONT_FAMILY, 15, "bold"),
                     text_color="#FFFFFF",
-                    width=105,
-                    height=40,
+                    width=120,
+                    height=38,
                     fg_color=btn_color,
                     hover_color=hover_color,
                     command=cmd,
                 )
-                btn.grid(row=r_idx, column=c_idx, padx=4, pady=3)
+                btn.grid(row=r_idx, column=c_idx, padx=5, pady=2)
 
         # Large Submit Button in Dark Navy Blue with Crisp White Text
         self.dispense_entry_btn = ctk.CTkButton(
             keypad_card,
             text="IDENTIFY & COLLECT  (හඳුනාගෙන ලබාගන්න | அடையாளம்)  ➔",
-            font=(FONT_FAMILY, 16, "bold"),
+            font=(FONT_FAMILY, 15, "bold"),
             text_color="#FFFFFF",
-            height=48,
+            height=44,
             fg_color=COLORS["btn_primary"],
             hover_color=COLORS["btn_primary_hover"],
             command=self._manual_login,
         )
-        self.dispense_entry_btn.pack(fill="x", padx=14, pady=(4, 8))
+        self.dispense_entry_btn.pack(fill="x", padx=16, pady=(4, 6))
 
         # Simulation Frame: Hidden by default, shown ONLY for Emp ID 641
-        self.sim_frame = ctk.CTkFrame(left_panel, fg_color=COLORS["card_bg"], corner_radius=10, border_width=1, border_color="#3b82f6")
+        self.sim_frame = ctk.CTkFrame(standby_card, fg_color=COLORS["input_bg"], corner_radius=10, border_width=1, border_color="#3b82f6")
 
         sim_header = ctk.CTkLabel(
             self.sim_frame,
             text="🧪 Developer / Simulation Controls (Emp ID 641 Active):",
-            font=(FONT_FAMILY, 11, "bold"),
+            font=(FONT_FAMILY, 10, "bold"),
             text_color="#60a5fa",
         )
-        sim_header.pack(anchor="w", padx=10, pady=(3, 1))
+        sim_header.pack(anchor="w", padx=10, pady=(2, 1))
 
         sim_btns_row = ctk.CTkFrame(self.sim_frame, fg_color="transparent")
-        sim_btns_row.pack(fill="x", padx=10, pady=(0, 4))
+        sim_btns_row.pack(fill="x", padx=10, pady=(0, 3))
 
         test_punch_btn = ctk.CTkButton(
             sim_btns_row,
             text="🧪 Sim Scan 641",
-            font=(FONT_FAMILY, 11, "bold"),
+            font=(FONT_FAMILY, 10, "bold"),
             text_color="#FFFFFF",
-            height=30,
+            height=28,
             fg_color="#1e3a8a",
             hover_color="#2563eb",
             command=lambda: self._simulate_punch("641"),
@@ -467,9 +486,9 @@ class ReceivingKioskApp(ctk.CTk):
         test_post_btn = ctk.CTkButton(
             sim_btns_row,
             text="📡 Sim ADMS POST",
-            font=(FONT_FAMILY, 11, "bold"),
+            font=(FONT_FAMILY, 10, "bold"),
             text_color="#FFFFFF",
-            height=30,
+            height=28,
             fg_color=COLORS["btn_dark"],
             hover_color=COLORS["btn_dark_hover"],
             command=lambda: self._simulate_http_post("641"),
@@ -478,7 +497,7 @@ class ReceivingKioskApp(ctk.CTk):
 
         # Spinner Loading Container Box (Hidden until active)
         self.spinner_box = ctk.CTkFrame(
-            left_panel,
+            standby_card,
             fg_color="#0b1329",
             corner_radius=12,
             border_width=1,
@@ -497,23 +516,20 @@ class ReceivingKioskApp(ctk.CTk):
         self.spinner_label = ctk.CTkLabel(
             self.spinner_box,
             text="⏳ Identifying Employee... Please wait",
-            font=(FONT_FAMILY, 13, "bold"),
+            font=(FONT_FAMILY, 12, "bold"),
             text_color="#60A5FA",
-            wraplength=460,
+            wraplength=540,
         )
 
         # Status Message Banner
         self.standby_status = ctk.CTkLabel(
-            left_panel,
+            standby_card,
             text=f"🟢 ZKTeco Port {self.middleware.port} Active • Ready for scan  |  සූදානම්",
-            font=(FONT_FAMILY, 12, "bold"),
+            font=(FONT_FAMILY, 11, "bold"),
             text_color=COLORS["accent_green"] if self.middleware_running else COLORS["accent_red"],
-            wraplength=460,
+            wraplength=560,
         )
         self.standby_status.pack(side="bottom", pady=8)
-
-        # Right Panel: Terminal
-        self._build_right_terminal(col_grid)
 
     def _start_spinner(self, title_msg, subtitle_msg=""):
         def _do_start():

@@ -9,8 +9,8 @@ datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 
 a = Analysis(
-    ['desktopapp/receiving_kiosk.py'],
-    pathex=['.'],
+    ['D:/firebaselearning/meal-management-project/desktopapp/receiving_kiosk.py'],
+    pathex=['D:/firebaselearning/meal-management-project'],
     binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,

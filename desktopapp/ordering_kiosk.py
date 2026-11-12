@@ -38,7 +38,7 @@ def check_ordering_cutoff(meal_type, start_date, override=False):
     """
     Check if the ordering cutoff for a meal has passed.
     - If ordering for Today: Checks current time against configured cutoff.
-    - If ordering for Tomorrow or Future: Always Allowed.
+    - If ordering for Next Day or Other Next Day: Always Allowed (Cutoff never applies).
     - If override is True (Admin / Emp 641): Always Allowed.
     Returns: (is_closed, status_message, cutoff_display)
     """
@@ -50,7 +50,7 @@ def check_ordering_cutoff(meal_type, start_date, override=False):
 
     today = datetime.date.today()
     if start_date > today:
-        return False, f"🟢 Open for Future Booking (Cutoff on day: {cutoff_display})  |  විවෘතයි  |  திறந்துள்ளது", cutoff_display
+        return False, f"🟢 Open for Advance Booking (Cutoff on day: {cutoff_display})  |  විවෘතයි  |  திறந்துள்ளது", cutoff_display
 
     # If ordering for Today
     now = datetime.datetime.now()
@@ -280,34 +280,51 @@ class OrderingKioskApp(ctk.CTk):
             corner_radius=20,
             border_width=1,
             border_color=COLORS["card_border"],
+            width=640,
         )
-        standby_card.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.98, relheight=0.94)
-
-        # 2-Column Split Grid
-        col_grid = ctk.CTkFrame(standby_card, fg_color="transparent")
-        col_grid.pack(fill="both", expand=True, padx=16, pady=12)
-        col_grid.columnconfigure(0, weight=55)  # Left: Scanner & On-Screen Keypad
-        col_grid.columnconfigure(1, weight=45)  # Right: Live Port Listener Terminal
-        col_grid.rowconfigure(0, weight=1)
+        standby_card.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.58, relheight=0.96)
 
         # =========================================================
-        # LEFT PANEL: SCANNER, CANTEEN CUTOFFS & ON-SCREEN KEYPAD
+        # PROMINENT TITLE HEADER: SINHALA & ENGLISH
         # =========================================================
-        left_panel = ctk.CTkFrame(col_grid, fg_color=COLORS["input_bg"], corner_radius=16)
-        left_panel.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=0)
+        title_box = ctk.CTkFrame(standby_card, fg_color="transparent")
+        title_box.pack(fill="x", padx=20, pady=(12, 4))
 
-        # Scanner Prompt Banner
-        prompt_box = ctk.CTkFrame(left_panel, fg_color="transparent")
-        prompt_box.pack(fill="x", padx=16, pady=(8, 3))
+        ctk.CTkLabel(
+            title_box,
+            text="MEAL MANAGEMENT SYSTEM",
+            font=(FONT_FAMILY, 24, "bold"),
+            text_color="#60A5FA",
+        ).pack(anchor="center")
+
+        ctk.CTkLabel(
+            title_box,
+            text="ආහාර කළමනාකරණ පද්ධතිය",
+            font=(FONT_FAMILY, 19, "bold"),
+            text_color="#FCD34D",
+        ).pack(anchor="center", pady=(1, 2))
+
+        ctk.CTkLabel(
+            title_box,
+            text="Meal Ordering & Scheduling Kiosk  |  කෑම ඇණවුම් කිරීමේ පද්ධතිය  |  உணவு முன்பதிவு",
+            font=(FONT_FAMILY, 12, "bold"),
+            text_color=COLORS["text_muted"],
+        ).pack(anchor="center")
+
+        # =========================================================
+        # SCANNER PROMPT BANNER
+        # =========================================================
+        prompt_box = ctk.CTkFrame(standby_card, fg_color="transparent")
+        prompt_box.pack(fill="x", padx=20, pady=(4, 3))
 
         title_row = ctk.CTkFrame(prompt_box, fg_color="transparent")
         title_row.pack(anchor="center")
-        ctk.CTkLabel(title_row, text="🖐️", font=(FONT_FAMILY, 24)).pack(side="left", padx=(0, 6))
+        ctk.CTkLabel(title_row, text="🖐️", font=(FONT_FAMILY, 22)).pack(side="left", padx=(0, 6))
         ctk.CTkLabel(
             title_row,
             text="SCAN FINGERPRINT OR ENTER ID",
             font=(FONT_FAMILY, 16, "bold"),
-            text_color="#60A5FA",
+            text_color="#38BDF8",
         ).pack(side="left")
 
         ctk.CTkLabel(
@@ -316,44 +333,44 @@ class OrderingKioskApp(ctk.CTk):
             font=(FONT_FAMILY, 11, "bold"),
             text_color=COLORS["text_muted"],
             justify="center",
-            wraplength=460,
+            wraplength=560,
         ).pack(anchor="center", pady=(2, 0))
 
         # Canteen Cutoff Times Bar (Compact, High-Contrast)
-        cutoff_bar = ctk.CTkFrame(left_panel, fg_color=COLORS["card_bg"], corner_radius=10, border_width=1, border_color=COLORS["card_border"])
-        cutoff_bar.pack(fill="x", padx=16, pady=(3, 6), ipady=3)
+        cutoff_bar = ctk.CTkFrame(standby_card, fg_color=COLORS["input_bg"], corner_radius=10, border_width=1, border_color=COLORS["card_border"])
+        cutoff_bar.pack(fill="x", padx=20, pady=(3, 6), ipady=3)
 
         cutoffs_summary = (
-            f"⏰ Cutoffs: Breakfast {ORDERING_CUTOFFS['Breakfast']['display']} (උදෑසන • காலை)  |  "
-            f"Lunch {ORDERING_CUTOFFS['Lunch']['display']} (දවල් • மதியம்)  |  "
-            f"Dinner {ORDERING_CUTOFFS['Dinner']['display']} (රාත්‍රී • இரவு)"
+            f"⏰ Cutoffs: Breakfast {ORDERING_CUTOFFS['Breakfast']['display']} (උදෑසන)  |  "
+            f"Lunch {ORDERING_CUTOFFS['Lunch']['display']} (දවල්)  |  "
+            f"Dinner {ORDERING_CUTOFFS['Dinner']['display']} (රාත්‍රී)"
         )
         ctk.CTkLabel(
             cutoff_bar,
             text=cutoffs_summary,
-            font=(FONT_FAMILY, 10, "bold"),
+            font=(FONT_FAMILY, 11, "bold"),
             text_color=COLORS["accent_yellow"],
             justify="center",
-            wraplength=460,
+            wraplength=560,
         ).pack()
 
         # =========================================================
         # ON-SCREEN TOUCH KEYPAD CONTAINER
         # =========================================================
-        keypad_card = ctk.CTkFrame(left_panel, fg_color=COLORS["card_bg"], corner_radius=14, border_width=1, border_color=COLORS["card_border"])
-        keypad_card.pack(fill="x", padx=16, pady=(0, 4), ipady=3)
+        keypad_card = ctk.CTkFrame(standby_card, fg_color=COLORS["input_bg"], corner_radius=14, border_width=1, border_color=COLORS["card_border"])
+        keypad_card.pack(fill="x", padx=20, pady=(0, 4), ipady=3)
 
         # PIN Entry Display Field
         display_frame = ctk.CTkFrame(keypad_card, fg_color="transparent")
-        display_frame.pack(fill="x", padx=14, pady=(6, 4))
+        display_frame.pack(fill="x", padx=16, pady=(6, 4))
 
         self.pin_entry = ctk.CTkEntry(
             display_frame,
             placeholder_text="Enter Employee ID (e.g. 641)  |  සේවක අංකය  |  ஊழியர் எண்",
-            font=(FONT_FAMILY, 16, "bold"),
-            height=42,
+            font=(FONT_FAMILY, 17, "bold"),
+            height=44,
             justify="center",
-            fg_color=COLORS["input_bg"],
+            fg_color=COLORS["card_bg"],
             border_color="#3B82F6",
             border_width=1,
             text_color=COLORS["text_main"],
@@ -364,7 +381,7 @@ class OrderingKioskApp(ctk.CTk):
 
         # Keypad 3x4 Grid
         keypad_grid = ctk.CTkFrame(keypad_card, fg_color="transparent")
-        keypad_grid.pack(padx=14, pady=(0, 4))
+        keypad_grid.pack(padx=16, pady=(0, 4))
 
         keys = [
             ["1", "2", "3"],
@@ -391,31 +408,31 @@ class OrderingKioskApp(ctk.CTk):
                 btn = ctk.CTkButton(
                     keypad_grid,
                     text=key_label,
-                    font=(FONT_FAMILY, 14, "bold"),
+                    font=(FONT_FAMILY, 15, "bold"),
                     text_color="#FFFFFF",
-                    width=95,
-                    height=36,
+                    width=120,
+                    height=38,
                     fg_color=btn_color,
                     hover_color=hover_color,
                     command=cmd,
                 )
-                btn.grid(row=r_idx, column=c_idx, padx=4, pady=2)
+                btn.grid(row=r_idx, column=c_idx, padx=5, pady=2)
 
         # Large Submit Button in Dark Navy Blue with Crisp White Text
         self.login_btn = ctk.CTkButton(
             keypad_card,
             text="LOGIN / ENTER  (ඇතුල් වන්න | உள்நுழைக)  ➔",
-            font=(FONT_FAMILY, 14, "bold"),
+            font=(FONT_FAMILY, 15, "bold"),
             text_color="#FFFFFF",
-            height=42,
+            height=44,
             fg_color=COLORS["btn_primary"],
             hover_color=COLORS["btn_primary_hover"],
             command=self._manual_login,
         )
-        self.login_btn.pack(fill="x", padx=14, pady=(4, 6))
+        self.login_btn.pack(fill="x", padx=16, pady=(4, 6))
 
         # Simulation Frame: Hidden by default, ONLY shown for Emp ID 641
-        self.sim_frame = ctk.CTkFrame(left_panel, fg_color=COLORS["card_bg"], corner_radius=10, border_width=1, border_color="#3b82f6")
+        self.sim_frame = ctk.CTkFrame(standby_card, fg_color=COLORS["input_bg"], corner_radius=10, border_width=1, border_color="#3b82f6")
 
         sim_header = ctk.CTkLabel(
             self.sim_frame,
@@ -454,7 +471,7 @@ class OrderingKioskApp(ctk.CTk):
 
         # Spinner Loading Bar (Indeterminate)
         self.loading_bar = ctk.CTkProgressBar(
-            left_panel,
+            standby_card,
             mode="indeterminate",
             height=4,
             corner_radius=2,
@@ -464,16 +481,13 @@ class OrderingKioskApp(ctk.CTk):
 
         # Status Message Banner
         self.standby_status = ctk.CTkLabel(
-            left_panel,
+            standby_card,
             text=f"🟢 ZKTeco Port {self.middleware.port} Active • Ready for scan  |  සූදානම්",
             font=(FONT_FAMILY, 11, "bold"),
             text_color=COLORS["accent_green"] if self.middleware_running else COLORS["accent_red"],
-            wraplength=460,
+            wraplength=560,
         )
-        self.standby_status.pack(side="bottom", pady=6)
-
-        # Right Panel: Terminal
-        self._build_right_terminal(col_grid)
+        self.standby_status.pack(side="bottom", pady=8)
 
     def _start_spinner(self, title_msg, subtitle_msg=""):
         def _do_start():
@@ -913,12 +927,13 @@ class OrderingKioskApp(ctk.CTk):
         emp_id = str(employee.get("emp_id") or employee.get("employee_id") or "").strip()
         is_admin_user = (emp_id == "641")
 
-        # Default quantities
+        # Default quantities (Lunch = 1 if open today, else 0)
+        is_lunch_closed, _, _ = check_ordering_cutoff("Lunch", datetime.date.today(), self.admin_override)
         self.breakfast_qty = 0
-        self.lunch_qty = 1
+        self.lunch_qty = 0 if is_lunch_closed else 1
         self.dinner_qty = 0
 
-        # Reset date range to Today -> Today
+        # Reset date selection to Today (single day)
         self.start_date = datetime.date.today()
         self.end_date = datetime.date.today()
         self.date_preset = "TODAY"
@@ -934,7 +949,7 @@ class OrderingKioskApp(ctk.CTk):
         grid_container.rowconfigure(0, weight=1)
 
         # =========================================================
-        # LEFT COLUMN: ORDERING FORM, DATE SELECTOR & MEAL CARDS
+        # LEFT COLUMN: ORDERING FORM, DAY SELECTOR & MEAL CARDS
         # =========================================================
         left_col = ctk.CTkFrame(
             grid_container,
@@ -945,120 +960,46 @@ class OrderingKioskApp(ctk.CTk):
         )
         left_col.grid(row=0, column=0, sticky="nsew", padx=(0, 10), pady=0)
 
-        # 1. Section: Date Range Selector
-        date_header = ctk.CTkFrame(left_col, fg_color="transparent")
-        date_header.pack(fill="x", padx=16, pady=(10, 3))
+        # 1. Section: Day Selector (Current Day, Next Day, Other Next Day)
+        day_header = ctk.CTkFrame(left_col, fg_color="transparent")
+        day_header.pack(fill="x", padx=16, pady=(10, 4))
 
         ctk.CTkLabel(
-            date_header,
-            text=get_text("section_1_date_range"),
+            day_header,
+            text="📅 SELECT MEAL DAY  (දිනය තෝරන්න | தேதியைத் தேர்ந்தெடுக்கவும்):",
             font=(FONT_FAMILY, 14, "bold"),
             text_color=COLORS["text_main"],
         ).pack(anchor="w")
 
-        # Preset Buttons Row in Dark Navy Blue with Crisp White Text
-        preset_frame = ctk.CTkFrame(left_col, fg_color="transparent")
-        preset_frame.pack(fill="x", padx=16, pady=(3, 6))
+        day_buttons_frame = ctk.CTkFrame(left_col, fg_color="transparent")
+        day_buttons_frame.pack(fill="x", padx=16, pady=(2, 6))
 
-        presets = [
-            ("Today (අද | இன்று)", "TODAY"),
-            ("Tomorrow (හෙට | நாளை)", "TOMORROW"),
-            ("3 Days (දින 3 | 3 நாள்)", "NEXT_3"),
-            ("7 Days (දින 7 | 7 நாள்)", "NEXT_7"),
+        today = datetime.date.today()
+        day_choices = [
+            ("TODAY", today, f"Today (අද | இன்று)\n{today.strftime('%a, %d %b')}"),
+            ("NEXT_DAY", today + datetime.timedelta(days=1), f"Tomorrow (හෙට | நாளை)\n{(today + datetime.timedelta(days=1)).strftime('%a, %d %b')}"),
+            ("OTHER_NEXT_DAY", today + datetime.timedelta(days=2), f"Other Next Day (අනිද්දා)\n{(today + datetime.timedelta(days=2)).strftime('%a, %d %b')}"),
         ]
-        self.preset_buttons = {}
-        for title, key in presets:
+
+        self.day_buttons = {}
+        for key, target_date, label_text in day_choices:
             btn = ctk.CTkButton(
-                preset_frame,
-                text=title,
-                font=(FONT_FAMILY, 11, "bold"),
+                day_buttons_frame,
+                text=label_text,
+                font=(FONT_FAMILY, 12, "bold"),
                 text_color="#FFFFFF",
-                height=32,
-                fg_color=COLORS["btn_primary"] if key == "TODAY" else COLORS["btn_dark"],
+                height=48,
+                corner_radius=10,
+                border_width=2 if target_date == self.start_date else 1,
+                border_color="#60A5FA" if target_date == self.start_date else COLORS["card_border"],
+                fg_color=COLORS["btn_primary"] if target_date == self.start_date else COLORS["btn_dark"],
                 hover_color=COLORS["btn_primary_hover"],
-                command=lambda k=key: self._apply_date_preset(k),
+                command=lambda d=target_date: self._select_day(d),
             )
-            btn.pack(side="left", fill="x", expand=True, padx=(0, 4))
-            self.preset_buttons[key] = btn
+            btn.pack(side="left", fill="x", expand=True, padx=3)
+            self.day_buttons[target_date] = btn
 
-        # Date Pickers Row (From Date <-> To Date)
-        picker_frame = ctk.CTkFrame(left_col, fg_color=COLORS["input_bg"], corner_radius=12)
-        picker_frame.pack(fill="x", padx=16, pady=(0, 6), ipady=4)
-
-        # From Date Box
-        from_box = ctk.CTkFrame(picker_frame, fg_color="transparent")
-        from_box.pack(side="left", padx=8, pady=2, expand=True)
-
-        ctk.CTkLabel(
-            from_box, text=get_text("from_date"), font=(FONT_FAMILY, 11, "bold"), text_color=COLORS["text_muted"]
-        ).pack(anchor="w")
-
-        from_ctrl = ctk.CTkFrame(from_box, fg_color="transparent")
-        from_ctrl.pack(anchor="w", pady=1)
-
-        ctk.CTkButton(
-            from_ctrl, text="◀", width=32, height=32, font=(FONT_FAMILY, 13, "bold"),
-            text_color="#FFFFFF", fg_color=COLORS["btn_dark"], hover_color=COLORS["btn_primary_hover"],
-            command=lambda: self._adjust_date("START", -1)
-        ).pack(side="left", padx=2)
-
-        self.from_label = ctk.CTkLabel(
-            from_ctrl, text=self.start_date.strftime("%Y-%m-%d"), font=(FONT_FAMILY, 14, "bold"), width=100, text_color=COLORS["text_main"]
-        )
-        self.from_label.pack(side="left", padx=2)
-
-        ctk.CTkButton(
-            from_ctrl, text="▶", width=32, height=32, font=(FONT_FAMILY, 13, "bold"),
-            text_color="#FFFFFF", fg_color=COLORS["btn_dark"], hover_color=COLORS["btn_primary_hover"],
-            command=lambda: self._adjust_date("START", 1)
-        ).pack(side="left", padx=2)
-
-        # Arrow Separator
-        ctk.CTkLabel(picker_frame, text="➔", font=(FONT_FAMILY, 16, "bold"), text_color="#60A5FA").pack(side="left", padx=2)
-
-        # To Date Box
-        to_box = ctk.CTkFrame(picker_frame, fg_color="transparent")
-        to_box.pack(side="left", padx=8, pady=2, expand=True)
-
-        ctk.CTkLabel(
-            to_box, text=get_text("to_date"), font=(FONT_FAMILY, 11, "bold"), text_color=COLORS["text_muted"]
-        ).pack(anchor="w")
-
-        to_ctrl = ctk.CTkFrame(to_box, fg_color="transparent")
-        to_ctrl.pack(anchor="w", pady=1)
-
-        ctk.CTkButton(
-            to_ctrl, text="◀", width=32, height=32, font=(FONT_FAMILY, 13, "bold"),
-            text_color="#FFFFFF", fg_color=COLORS["btn_dark"], hover_color=COLORS["btn_primary_hover"],
-            command=lambda: self._adjust_date("END", -1)
-        ).pack(side="left", padx=2)
-
-        self.to_label = ctk.CTkLabel(
-            to_ctrl, text=self.end_date.strftime("%Y-%m-%d"), font=(FONT_FAMILY, 14, "bold"), width=100, text_color=COLORS["text_main"]
-        )
-        self.to_label.pack(side="left", padx=2)
-
-        ctk.CTkButton(
-            to_ctrl, text="▶", width=32, height=32, font=(FONT_FAMILY, 13, "bold"),
-            text_color="#FFFFFF", fg_color=COLORS["btn_dark"], hover_color=COLORS["btn_primary_hover"],
-            command=lambda: self._adjust_date("END", 1)
-        ).pack(side="left", padx=2)
-
-        # Days Duration Tag
-        self.duration_badge = ctk.CTkLabel(
-            picker_frame,
-            text="Duration: 1 Day (දින 1 | 1 நாள்)",
-            font=(FONT_FAMILY, 11, "bold"),
-            text_color="#60A5FA",
-            fg_color=COLORS["card_bg"],
-            corner_radius=8,
-            padx=10,
-            pady=4,
-            wraplength=180,
-        )
-        self.duration_badge.pack(side="right", padx=10)
-
-        # Existing Allocations Alert Banner for Selected Date Range
+        # Existing Allocations Alert Banner for Selected Date
         self.alert_banner = ctk.CTkFrame(left_col, fg_color="transparent", corner_radius=10)
         self.alert_banner.pack(fill="x", padx=16, pady=(0, 4))
         self.alert_label = ctk.CTkLabel(
@@ -1275,16 +1216,18 @@ class OrderingKioskApp(ctk.CTk):
             border_width=1,
             border_color=COLORS["card_border"] if not is_closed else "#7f1d1d",
         )
-        card.pack(fill="x", pady=2)
+        card.pack(fill="x", pady=3)
 
         if is_closed and not self.admin_override:
             setattr(self, f"{attr_name}_qty", 0)
 
         current_val = getattr(self, f"{attr_name}_qty", 0)
+        current_val = max(0, min(1, current_val))
+        setattr(self, f"{attr_name}_qty", current_val)
 
         # Left Column: Info & Status
         left_info = ctk.CTkFrame(card, fg_color="transparent")
-        left_info.pack(side="left", padx=10, pady=4)
+        left_info.pack(side="left", padx=12, pady=6)
 
         title_row = ctk.CTkFrame(left_info, fg_color="transparent")
         title_row.pack(anchor="w")
@@ -1297,135 +1240,160 @@ class OrderingKioskApp(ctk.CTk):
             text_color=COLORS["text_main"] if not is_closed else "#9ca3af",
         ).pack(side="left")
 
+        ctk.CTkLabel(
+            title_row,
+            text="[Max: 1  |  උපරිම: 1]",
+            font=(FONT_FAMILY, 10, "bold"),
+            text_color="#60A5FA" if not is_closed else "#6b7280",
+        ).pack(side="left", padx=(8, 0))
+
         status_color = "#34d399" if not is_closed else "#f87171"
         ctk.CTkLabel(
             left_info,
             text=cutoff_msg,
             font=(FONT_FAMILY, 10),
             text_color=status_color,
-            wraplength=300,
+            wraplength=340,
             justify="left",
         ).pack(anchor="w", pady=(1, 0))
 
-        # Right Column: Counter Buttons in Dark Navy Blue with White Text
+        # Right Column: Counter Buttons (0 or 1 Portion Only)
         ctrl_box = ctk.CTkFrame(card, fg_color="transparent")
-        ctrl_box.pack(side="right", padx=10, pady=4)
+        ctrl_box.pack(side="right", padx=12, pady=6)
 
         minus_btn = ctk.CTkButton(
             ctrl_box,
             text="−",
-            font=(FONT_FAMILY, 15, "bold"),
+            font=(FONT_FAMILY, 16, "bold"),
             text_color="#FFFFFF",
-            width=34,
-            height=34,
-            fg_color=COLORS["btn_dark"] if not is_closed else "#27272a",
+            width=38,
+            height=38,
+            fg_color=COLORS["btn_dark"] if (not is_closed and current_val > 0) else "#1e293b",
             hover_color=COLORS["btn_dark_hover"],
-            state="normal" if not is_closed else "disabled",
+            state="normal" if (not is_closed and current_val > 0) else "disabled",
             command=lambda: self._adjust_meal_qty(attr_name, -1),
         )
-        minus_btn.pack(side="left", padx=2)
+        minus_btn.pack(side="left", padx=3)
+        setattr(self, f"{attr_name}_minus_btn", minus_btn)
 
         val_label = ctk.CTkLabel(
             ctrl_box,
             text=str(current_val),
-            font=(FONT_FAMILY, 15, "bold"),
-            width=28,
+            font=(FONT_FAMILY, 17, "bold"),
+            width=32,
             text_color=COLORS["text_main"] if not is_closed else "#6b7280",
         )
-        val_label.pack(side="left", padx=2)
+        val_label.pack(side="left", padx=3)
         setattr(self, f"{attr_name}_label", val_label)
 
         plus_btn = ctk.CTkButton(
             ctrl_box,
             text="+",
-            font=(FONT_FAMILY, 15, "bold"),
+            font=(FONT_FAMILY, 16, "bold"),
             text_color="#FFFFFF",
-            width=34,
-            height=34,
-            fg_color=COLORS["btn_primary"] if not is_closed else "#27272a",
+            width=38,
+            height=38,
+            fg_color=COLORS["btn_primary"] if (not is_closed and current_val < 1) else "#1e293b",
             hover_color=COLORS["btn_primary_hover"],
-            state="normal" if not is_closed else "disabled",
+            state="normal" if (not is_closed and current_val < 1) else "disabled",
             command=lambda: self._adjust_meal_qty(attr_name, 1),
         )
-        plus_btn.pack(side="left", padx=2)
+        plus_btn.pack(side="left", padx=3)
+        setattr(self, f"{attr_name}_plus_btn", plus_btn)
 
     def _adjust_meal_qty(self, attr_name, delta):
         self.countdown_remaining = ORDERING_TIMEOUT_SEC
-        curr = getattr(self, f"{attr_name}_qty")
-        new_val = max(0, min(5, curr + delta))
+        curr = getattr(self, f"{attr_name}_qty", 0)
+        # Strictly limit portion quantity to max 1 (only 0 or 1)
+        new_val = max(0, min(1, curr + delta))
         setattr(self, f"{attr_name}_qty", new_val)
+
         lbl = getattr(self, f"{attr_name}_label", None)
-        if lbl:
+        if lbl and lbl.winfo_exists():
             lbl.configure(text=str(new_val))
+
+        plus_btn = getattr(self, f"{attr_name}_plus_btn", None)
+        minus_btn = getattr(self, f"{attr_name}_minus_btn", None)
+
+        if plus_btn and plus_btn.winfo_exists():
+            plus_btn.configure(
+                state="disabled" if new_val >= 1 else "normal",
+                fg_color="#1e293b" if new_val >= 1 else COLORS["btn_primary"],
+            )
+        if minus_btn and minus_btn.winfo_exists():
+            minus_btn.configure(
+                state="disabled" if new_val <= 0 else "normal",
+                fg_color="#1e293b" if new_val <= 0 else COLORS["btn_dark"],
+            )
         self._update_order_calculation()
 
     def _update_order_calculation(self):
-        total_days = (self.end_date - self.start_date).days + 1
         daily_portions = self.breakfast_qty + self.lunch_qty + self.dinner_qty
-        total_meals = daily_portions * total_days
+        day_str = self.start_date.strftime("%A, %d %B %Y")
 
+        meals_breakdown = []
+        if self.breakfast_qty > 0:
+            meals_breakdown.append("1 Breakfast (උදෑසන)")
+        if self.lunch_qty > 0:
+            meals_breakdown.append("1 Lunch (දිවා)")
+        if self.dinner_qty > 0:
+            meals_breakdown.append("1 Dinner (රාත්‍රී)")
+
+        meals_txt = " + ".join(meals_breakdown) if meals_breakdown else "No meals selected (ආහාර තෝරාගෙන නැත)"
         calc_text = (
-            f"Daily: {self.breakfast_qty}B + {self.lunch_qty}L + {self.dinner_qty}D = {daily_portions} portion(s)/day  |  "
-            f"Total: {total_days} Day(s) × {daily_portions} = {total_meals} Meals"
+            f"📅 Selected Day: {day_str}\n"
+            f"🍽️ Meals: {meals_txt}  ➔  Total: {daily_portions} Meal(s) (Max 1 per meal | උපරිම: 1)"
         )
         if hasattr(self, "summary_calc_label") and self.summary_calc_label.winfo_exists():
             self.summary_calc_label.configure(text=calc_text)
 
     # -------------------------------------------------------------
-    # DATE RANGE CONTROLS & PRESETS
+    # DAY SELECTION (Current Day, Next Day, Other Next Day)
     # -------------------------------------------------------------
-    def _apply_date_preset(self, preset_key):
+    def _select_day(self, chosen_date):
         self.countdown_remaining = ORDERING_TIMEOUT_SEC
-        self.date_preset = preset_key
+        self.start_date = chosen_date
+        self.end_date = chosen_date
+
+        if hasattr(self, "day_buttons"):
+            for d_date, btn in self.day_buttons.items():
+                if d_date == chosen_date:
+                    btn.configure(
+                        fg_color=COLORS["btn_primary"],
+                        border_color="#60A5FA",
+                        border_width=2,
+                    )
+                else:
+                    btn.configure(
+                        fg_color=COLORS["btn_dark"],
+                        border_color=COLORS["card_border"],
+                        border_width=1,
+                    )
+
+        self._build_all_meal_portion_cards()
+        self._check_existing_allocations_for_range()
+        self._update_order_calculation()
+
+    def _apply_date_preset(self, preset_key):
         today = datetime.date.today()
-
         if preset_key == "TODAY":
-            self.start_date = today
-            self.end_date = today
+            self._select_day(today)
         elif preset_key == "TOMORROW":
-            self.start_date = today + datetime.timedelta(days=1)
-            self.end_date = today + datetime.timedelta(days=1)
-        elif preset_key == "NEXT_3":
-            self.start_date = today
-            self.end_date = today + datetime.timedelta(days=2)
-        elif preset_key == "NEXT_7":
-            self.start_date = today
-            self.end_date = today + datetime.timedelta(days=6)
-
-        for k, btn in self.preset_buttons.items():
-            btn.configure(fg_color=COLORS["btn_primary"] if k == preset_key else COLORS["btn_dark"])
-
-        self._refresh_date_display()
+            self._select_day(today + datetime.timedelta(days=1))
+        elif preset_key in ["NEXT_3", "OTHER"]:
+            self._select_day(today + datetime.timedelta(days=2))
 
     def _adjust_date(self, which, delta_days):
-        self.countdown_remaining = ORDERING_TIMEOUT_SEC
+        new_d = self.start_date + datetime.timedelta(days=delta_days)
         today = datetime.date.today()
-
-        if which == "START":
-            new_date = self.start_date + datetime.timedelta(days=delta_days)
-            if new_date >= today:
-                self.start_date = new_date
-                if self.end_date < self.start_date:
-                    self.end_date = self.start_date
-        elif which == "END":
-            new_date = self.end_date + datetime.timedelta(days=delta_days)
-            if new_date >= self.start_date:
-                self.end_date = new_date
-
-        for btn in self.preset_buttons.values():
-            btn.configure(fg_color=COLORS["btn_dark"])
-
-        self._refresh_date_display()
+        max_d = today + datetime.timedelta(days=2)
+        if today <= new_d <= max_d:
+            self._select_day(new_d)
 
     def _refresh_date_display(self):
-        if hasattr(self, "from_label") and self.from_label.winfo_exists():
-            self.from_label.configure(text=self.start_date.strftime("%Y-%m-%d"))
-        if hasattr(self, "to_label") and self.to_label.winfo_exists():
-            self.to_label.configure(text=self.end_date.strftime("%Y-%m-%d"))
-
-        total_days = (self.end_date - self.start_date).days + 1
-        if hasattr(self, "duration_badge") and self.duration_badge.winfo_exists():
-            self.duration_badge.configure(text=f"Duration: {total_days} Day(s) (දින {total_days} | {total_days} நாட்கள்)")
+        self._build_all_meal_portion_cards()
+        self._check_existing_allocations_for_range()
+        self._update_order_calculation()
 
         self._build_all_meal_portion_cards()
         self._check_existing_allocations_for_range()
@@ -1549,13 +1517,13 @@ class OrderingKioskApp(ctk.CTk):
 
             self.alert_banner.configure(fg_color="#422006", border_width=1, border_color="#f59e0b")
             self.alert_label.configure(
-                text=f"ℹ️ Notice: Meals already booked in this range ({breakdown_str}). Duplicate entries prevented.\nමෙම දින පරාසය තුළ කෑම වෙන්කර ඇත. නැවත වෙන්කිරීම් වැළැක්වේ.",
+                text=f"ℹ️ Notice: Meal already booked for {start_str} ({breakdown_str}). Duplicate entries prevented.\nමෙම දිනය සඳහා කෑම වෙන්කර ඇත. නැවත වෙන්කිරීම් වැළැක්වේ.",
                 text_color="#fbbf24",
             )
         else:
             self.alert_banner.configure(fg_color="#064e3b", border_width=1, border_color="#10b981")
             self.alert_label.configure(
-                text="✅ Selected date range is clear. No conflicting meal allocations found.\nතෝරාගත් දින පරාසය තුළ ගැටුම් නොමැත.",
+                text=f"✅ Selected day ({start_str}) is clear. Ready to book.\nතෝරාගත් දිනය තුළ ගැටුම් නොමැත.",
                 text_color="#34d399",
             )
 

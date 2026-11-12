@@ -28,7 +28,8 @@ import {
   DownloadOutlined,
   CheckCircleOutlined,
   InfoCircleOutlined,
-  ArrowRightOutlined
+  ArrowRightOutlined,
+  DesktopOutlined
 } from "@ant-design/icons";
 
 const { Title, Text, Paragraph } = Typography;
@@ -162,7 +163,8 @@ export default function PortalUserGuide({ onDownloadPdf }) {
               { id: "mod4", title: "4. Previous Day Allocations", desc: "Historical query, custom date ranges & audit export", route: "#/admin/all-allocations" },
               { id: "mod5", title: "5. Daily Archived Reports", desc: "Daily archives & permanent cloud storage preservation", route: "#/admin/daily-archive" },
               { id: "mod6", title: "6. Employees Directory", desc: "579+ workforce records, Excel template & bulk import/export", route: "#/admin/employees" },
-              { id: "mod7", title: "7. System Master Data", desc: "Subsidy matrix (Full/Half/None) & company entities", route: "#/admin/settings" }
+              { id: "mod7", title: "7. System Master Data", desc: "Subsidy matrix (Full/Half/None) & company entities", route: "#/admin/settings" },
+              { id: "mod8", title: "8. Touchscreen Kiosk Guides", desc: "Meal Ordering & Dispensing Kiosk SOPs & Printable Posters", route: "Desktop Kiosk App" }
             ].map((m) => (
               <Col xs={24} sm={12} md={8} key={m.id}>
                 <Card
@@ -547,6 +549,186 @@ export default function PortalUserGuide({ onDownloadPdf }) {
               </Card>
             </Col>
           </Row>
+        </div>
+      )
+    },
+    {
+      key: "mod8",
+      tab: (
+        <span>
+          <DesktopOutlined /> 8. Kiosk Guides
+        </span>
+      ),
+      content: (
+        <div>
+          <Alert
+            message="Touchscreen Kiosk Operations & Factory Posters"
+            description="Official operating procedures and printable A1-landscape visual posters for factory floor employee touchpoints. Includes the Meal Ordering Kiosk and Meal Dispensing Kiosk workflows."
+            type="info"
+            showIcon
+            style={{ marginBottom: 20, borderRadius: 12 }}
+          />
+
+          <Tabs
+            defaultActiveKey="kiosk-ordering"
+            type="line"
+            items={[
+              {
+                key: "kiosk-ordering",
+                label: (
+                  <span style={{ fontWeight: 700 }}>
+                    🍱 1. Meal Ordering Kiosk Guide (කෑම ඇණවුම් කිරීම)
+                  </span>
+                ),
+                children: (
+                  <div>
+                    <Row gutter={[20, 20]} align="middle">
+                      <Col xs={24} lg={10}>
+                        <Tag color="blue" style={{ marginBottom: 8 }}>Touchscreen POS • Ordering Station</Tag>
+                        <Title level={3} style={{ color: "#065f46", margin: "4px 0 8px" }}>
+                          Meal Ordering Kiosk Workflow
+                        </Title>
+                        <Text type="secondary" style={{ display: "block", marginBottom: 14 }}>
+                          කෑම ඇණවුම් කිරීමේ සරල පියවර • உணவு முன்பதிவு வழிகாட்டி
+                        </Text>
+
+                        <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
+                          <Text strong style={{ color: "#0f172a", fontSize: 14 }}>4-Step Ordering Process:</Text>
+                          <ol style={{ paddingLeft: 18, marginTop: 8, fontSize: 13, color: "#334155", lineHeight: 1.8 }}>
+                            <li>
+                              <strong>Scan Fingerprint or Enter ID:</strong> Touch scanner or type PIN on touchscreen keypad and tap <em>"LOGIN / ENTER"</em>.
+                            </li>
+                            <li>
+                              <strong>Select Day:</strong> Single-day choice among <strong>Today (අද)</strong>, <strong>Tomorrow (හෙට)</strong>, or <strong>Other Next Day (අනිද්දා)</strong>. (No date ranges).
+                            </li>
+                            <li>
+                              <strong>Select Meals (Max 1 Portion):</strong> Choose Breakfast, Lunch, or Dinner. Increments capped strictly to <strong>maximum 1</strong> (0 or 1).
+                            </li>
+                            <li>
+                              <strong>Confirm Order:</strong> Tap <em>"CONFIRM & PLACE ORDER"</em>. Verified orders instantly display in upcoming bookings on subsequent logins.
+                            </li>
+                          </ol>
+                        </div>
+
+                        <div style={{ background: "#fef3c7", border: "1px solid #fde68a", borderRadius: 10, padding: "12px 14px", marginBottom: 16 }}>
+                          <Text strong style={{ color: "#92400e" }}>⏰ Cutoff Policy:</Text>
+                          <div style={{ fontSize: 12.5, color: "#78350f", marginTop: 4 }}>
+                            Cutoffs (09:00 AM Breakfast, 11:00 AM Lunch, 04:00 PM Dinner) strictly apply to <strong>Today</strong>. Advance bookings for <strong>Tomorrow</strong> and <strong>Other Next Day</strong> are <strong>always open</strong>.
+                          </div>
+                        </div>
+
+                        <Button
+                          type="primary"
+                          icon={<DownloadOutlined />}
+                          href="/docs/user_workflow_guide.png"
+                          download="Hayleys_Meal_Ordering_Kiosk_Guide.png"
+                          target="_blank"
+                          size="large"
+                          style={{ background: "#2563eb", borderColor: "#2563eb", fontWeight: 700, borderRadius: 8 }}
+                        >
+                          Download Ordering Poster (PNG)
+                        </Button>
+                      </Col>
+
+                      <Col xs={24} lg={14}>
+                        <Card
+                          bordered
+                          style={{ borderRadius: 12, overflow: "hidden", boxShadow: "0 6px 20px rgba(0,0,0,0.08)" }}
+                          bodyStyle={{ padding: 8 }}
+                        >
+                          <Image
+                            src="/docs/user_workflow_guide.png"
+                            alt="Meal Ordering Kiosk Workflow Guide Poster"
+                            style={{ borderRadius: 8, width: "100%", display: "block" }}
+                          />
+                          <div style={{ textAlign: "center", fontSize: 11, color: "#64748b", marginTop: 6 }}>
+                            Figure 8.1: Printable A1-Landscape Meal Ordering Kiosk User Guide Poster
+                          </div>
+                        </Card>
+                      </Col>
+                    </Row>
+                  </div>
+                )
+              },
+              {
+                key: "kiosk-receiving",
+                label: (
+                  <span style={{ fontWeight: 700 }}>
+                    🍲 2. Meal Dispensing Kiosk Guide (කෑම ලබාගැනීම)
+                  </span>
+                ),
+                children: (
+                  <div>
+                    <Row gutter={[20, 20]} align="middle">
+                      <Col xs={24} lg={10}>
+                        <Tag color="green" style={{ marginBottom: 8 }}>Touchscreen POS • Dispensing Station</Tag>
+                        <Title level={3} style={{ color: "#065f46", margin: "4px 0 8px" }}>
+                          Meal Dispensing Kiosk Workflow
+                        </Title>
+                        <Text type="secondary" style={{ display: "block", marginBottom: 14 }}>
+                          කෑම ලබාගැනීමේ සරල පියවර • உணவு விநியோக வழிகாட்டி
+                        </Text>
+
+                        <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
+                          <Text strong style={{ color: "#0f172a", fontSize: 14 }}>4-Step Dispensing Process:</Text>
+                          <ol style={{ paddingLeft: 18, marginTop: 8, fontSize: 13, color: "#334155", lineHeight: 1.8 }}>
+                            <li>
+                              <strong>Scan Fingerprint or Enter ID:</strong> Place finger or type Employee PIN and press <em>"IDENTIFY & COLLECT"</em>.
+                            </li>
+                            <li>
+                              <strong>Select Ready Meal:</strong> Active meal card glows blue during the designated serving window.
+                            </li>
+                            <li>
+                              <strong>Confirm & Dispense:</strong> Tap <em>"CONFIRM & DISPENSE"</em> to dispense portion and log transaction.
+                            </li>
+                            <li>
+                              <strong>Collect Meal:</strong> Large green checkmark confirms allocation. Duplicate dispenses are automatically prevented.
+                            </li>
+                          </ol>
+                        </div>
+
+                        <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "12px 14px", marginBottom: 16 }}>
+                          <Text strong style={{ color: "#166534" }}>🕒 Canteen Serving Hours:</Text>
+                          <div style={{ fontSize: 12.5, color: "#14532d", marginTop: 4 }}>
+                            Breakfast: 06:00 AM – 09:00 AM | Lunch: 11:00 AM – 02:00 PM | Dinner: 04:00 PM – 09:30 PM.
+                          </div>
+                        </div>
+
+                        <Button
+                          type="primary"
+                          icon={<DownloadOutlined />}
+                          href="/docs/receiving_workflow_guide.png"
+                          download="Hayleys_Meal_Dispensing_Kiosk_Guide.png"
+                          target="_blank"
+                          size="large"
+                          style={{ background: "#16a34a", borderColor: "#16a34a", fontWeight: 700, borderRadius: 8 }}
+                        >
+                          Download Dispensing Poster (PNG)
+                        </Button>
+                      </Col>
+
+                      <Col xs={24} lg={14}>
+                        <Card
+                          bordered
+                          style={{ borderRadius: 12, overflow: "hidden", boxShadow: "0 6px 20px rgba(0,0,0,0.08)" }}
+                          bodyStyle={{ padding: 8 }}
+                        >
+                          <Image
+                            src="/docs/receiving_workflow_guide.png"
+                            alt="Meal Dispensing Kiosk Workflow Guide Poster"
+                            style={{ borderRadius: 8, width: "100%", display: "block" }}
+                          />
+                          <div style={{ textAlign: "center", fontSize: 11, color: "#64748b", marginTop: 6 }}>
+                            Figure 8.2: Printable A1-Landscape Meal Dispensing Kiosk User Guide Poster
+                          </div>
+                        </Card>
+                      </Col>
+                    </Row>
+                  </div>
+                )
+              }
+            ]}
+          />
         </div>
       )
     }
